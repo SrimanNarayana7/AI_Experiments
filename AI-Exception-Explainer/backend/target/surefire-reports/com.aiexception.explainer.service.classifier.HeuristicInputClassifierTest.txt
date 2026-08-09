@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.aiexception.explainer.service.classifier.HeuristicInputClassifierTest
+-------------------------------------------------------------------------------
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in com.aiexception.explainer.service.classifier.HeuristicInputClassifierTest

@@ -1,0 +1,446 @@
+# 🤖 RICE-POT Prompt
+## Project: AI Exception Explainer
+
+---
+
+# 🧊 R — ROLE
+
+You are a Senior AI Software Engineer, Senior Java Architect, Senior React Engineer, Senior UX Designer, Senior Spring Boot Engineer, and AI Product Architect.
+
+Your responsibility is to build a complete production-quality application.
+
+The application must follow clean architecture, production standards, beautiful UI, reusable code, modular design and maintainability.
+
+Do NOT generate toy code.
+
+Always think like an experienced software engineer working at Microsoft, Google or Netflix.
+
+---
+
+# 📌 I — INSTRUCTIONS
+
+Build an AI-powered Exception Explainer application.
+
+The goal is to allow developers and QA engineers to paste:
+
+- Java Exceptions
+- Spring Boot Stack Traces
+- Selenium Errors
+- Playwright Errors
+- API Errors
+- SQL Errors
+- Generic Logs
+
+The AI should analyze the input using a local LLM (Ollama) and explain:
+
+- Root Cause
+- Why it happened
+- Human friendly explanation
+- Possible Fixes
+- Best Practices
+- Prevention Tips
+
+The application must look modern and professional.
+
+No placeholder UI.
+
+No ugly styling.
+
+No dummy code.
+
+Use modular architecture.
+
+---
+
+# 🌾 C — CONTEXT
+
+This is the first AI Engineering experiment.
+
+The application should be intentionally small but built with production quality.
+
+The application will later evolve into
+
+AI Debug Assistant
+
+AI Log Analyzer
+
+AI Stack Trace Analyzer
+
+AI Production Incident Analyzer
+
+Therefore the architecture should already support future expansion.
+
+The project must be easy to extend.
+
+---
+
+# 🎯 E — EXPECTATIONS
+
+The finished project should contain
+
+Frontend
+
+- React
+- Vite
+- Modern UI
+- Responsive
+- Dark Theme
+- Beautiful animations
+- Loading indicators
+- Error handling
+
+Backend
+
+- Spring Boot
+- REST APIs
+- Service Layer
+- DTOs
+- Exception Handling
+- Clean Package Structure
+
+AI
+
+Use Ollama
+
+Allow configurable model
+
+Example:
+
+qwen3-64k
+
+deepseek-64k
+
+devstral-64k
+
+Configuration should come from application.properties
+
+---
+
+# 🍚 P — PROCESS
+
+Follow these phases automatically.
+
+## Phase 1
+
+Design project structure.
+
+## Phase 2
+
+Create backend.
+
+## Phase 3
+
+Create frontend.
+
+## Phase 4
+
+Connect frontend to backend.
+
+## Phase 5
+
+Integrate Ollama.
+
+## Phase 6
+
+Test end-to-end.
+
+Never jump phases.
+
+---
+
+# 🍲 O — OUTPUT
+
+Create the complete application.
+
+Backend:
+
+```
+backend/
+```
+
+Frontend
+
+```
+frontend/
+```
+
+Documentation
+
+```
+README.md
+```
+
+Architecture
+
+```
+architecture.md
+```
+
+API Documentation
+
+```
+api.md
+```
+
+---
+
+# 🌳 T — TASKS
+
+The application must contain
+
+## Home Screen
+
+Title
+
+AI Exception Explainer
+
+Subtitle
+
+Understand exceptions instantly using AI.
+
+Large text area
+
+Paste Exception / Stack Trace / Logs
+
+Analyze Button
+
+Clear Button
+
+Model Dropdown
+
+Example
+
+- qwen3-64k
+- deepseek-64k
+- devstral-64k
+
+Loading animation
+
+---
+
+## AI Response Card
+
+Display
+
+### Exception Type
+
+Example
+
+NullPointerException
+
+---
+
+### Root Cause
+
+Human explanation
+
+---
+
+### Technical Explanation
+
+Explain exactly what happened.
+
+---
+
+### Suggested Fix
+
+Code examples when possible.
+
+---
+
+### Best Practices
+
+List improvements.
+
+---
+
+### Prevention Tips
+
+Explain how to avoid this issue.
+
+---
+
+### Confidence
+
+Display
+
+High
+
+Medium
+
+Low
+
+---
+
+# Backend API
+
+POST
+
+/api/analyze
+
+Request
+
+```json
+{
+  "model":"qwen3-64k",
+  "exception":"..."
+}
+```
+
+Response
+
+```json
+{
+  "exceptionType":"",
+  "rootCause":"",
+  "technicalExplanation":"",
+  "fix":"",
+  "bestPractices":[],
+  "preventionTips":[],
+  "confidence":"High"
+}
+```
+
+---
+
+# AI Prompt Engineering
+
+The backend should send a carefully designed prompt to Ollama.
+
+The prompt should instruct the model to behave like an expert Java debugger.
+
+The AI response should always be JSON.
+
+Never return plain text.
+
+---
+
+# UI Requirements
+
+Modern
+
+Rounded cards
+
+Dark Theme
+
+Gradient buttons
+
+Smooth animations
+
+Proper spacing
+
+Professional typography
+
+Beautiful loading spinner
+
+Responsive
+
+---
+
+# Error Handling
+
+Handle
+
+- Ollama unavailable
+- Timeout
+- Invalid response
+- Empty input
+- Backend unavailable
+
+Display friendly messages.
+
+---
+
+# Folder Structure
+
+```
+AI-Exception-Explainer/
+
+    frontend/
+
+    backend/
+
+    docs/
+
+    README.md
+
+    architecture.md
+```
+
+---
+
+# Code Quality
+
+Use
+
+SOLID
+
+Clean Code
+
+Meaningful naming
+
+Reusable components
+
+No duplicate code
+
+Production standards
+
+Proper comments only where necessary.
+
+---
+
+# Future Ready
+
+Design so future features can be added easily.
+
+Examples
+
+- Log Analysis
+
+- API Error Analysis
+
+- Playwright Failure Analysis
+
+- Selenium Failure Analysis
+
+- SQL Analysis
+
+- PDF Upload
+
+- File Upload
+
+- Multi Model Comparison
+
+Do not implement these now.
+
+Only design the architecture so they can be plugged in later.
+
+---
+
+# Success Criteria
+
+The project should run successfully by executing
+
+Frontend
+
+npm install
+
+npm run dev
+
+Backend
+
+mvn clean install
+
+mvn spring-boot:run
+
+The user should be able to
+
+Paste an exception
+
+↓
+
+Click Analyze
+
+↓
+
+Receive a structured AI explanation generated by Ollama.
