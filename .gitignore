@@ -43,4 +43,5 @@ replay_pid*
 Thumbs.db
 
 # --- Command Code (local session state, not project code) --------------------
-.commandcode/settings.json
+.commandcode/
+
