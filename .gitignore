@@ -2,7 +2,15 @@
 target/
 *.class
 *.jar
+*.war
+*.nar
+*.ear
 !.mvn/wrapper/maven-wrapper.jar
+
+# --- Package files -----------------------------------------------------------
+*.zip
+*.tar.gz
+*.rar
 
 # --- Node / Vite -------------------------------------------------------------
 node_modules/
@@ -14,6 +22,12 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+hs_err_pid*
+replay_pid*
+
+# --- BlueJ / J2ME -------------------------------------------------------------
+*.ctxt
+.mtj.tmp/
 
 # --- Env / Secrets -----------------------------------------------------------
 .env
