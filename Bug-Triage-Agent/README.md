@@ -30,8 +30,17 @@ Jira + LLM
 ```bash
 npm install
 cp .env.example .env        # then edit as needed
-npm run dev
+npm run dev                 # http://localhost:5174 (strictPort)
 ```
+
+The dev server runs on **port 5174** (`strictPort`). Other projects in this repo
+use distinct ports so they can run side by side:
+
+| Project | Dev port |
+| --- | --- |
+| AI-Exception-Explainer | 5173 |
+| Bug-Triage-Agent | 5174 |
+| Flaky-Test-Analyser-Agent | 5175 |
 
 Production build:
 
