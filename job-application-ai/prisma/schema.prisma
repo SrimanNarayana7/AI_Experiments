@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MasterResume {
+  id        String   @id @default(uuid())
+  name      String   @default("Master Resume")
+  content   String   @db.Text
+  rawText   String   @db.Text
+  originalFilename String?
+  mimeType  String?
+  fileSize  Int?
+  storagePath String?
+  extractedText String? @db.Text
+  sourceType String?   @default("manual")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resumeVersions ResumeVersion[]
+}
+
+model Job {
+  id             String          @id @default(uuid())
+  company        String
+  title          String
+  url            String?
+  location       String?
+  employmentType String?
+  salary         String?
+  priority       String          @default("MEDIUM")
+  description    String          @db.Text
+  status         String          @default("BACKLOG")
+  score          Int?
+  atsScore       Int?
+  appliedAt      DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  analysis       JobAnalysis?
+  skillMatches   SkillMatch[]
+  resumeVersions ResumeVersion[]
+  timeline       TimelineEvent[]
+  notes          Note[]
+
+  @@index([status])
+  @@index([company])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model JobAnalysis {
+  id               String   @id @default(uuid())
+  jobId            String   @unique
+  requiredSkills   String[] @default([])
+  preferredSkills  String[] @default([])
+  responsibilities String[] @default([])
+  qualifications   String[] @default([])
+  keywords         String[] @default([])
+  roleSummary      String   @db.Text
+  experienceLevel  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model ResumeVersion {
+  id                String    @id @default(uuid())
+  jobId             String
+  masterResumeId    String?
+  versionNumber     Int
+  content           Json      @default("{}")
+  optimizedContent  Json?
+  score             Int?
+  atsScore          Int?
+  scoreBreakdown    Json?
+  changeSummary     String?   @db.Text
+  isCurrent         Boolean   @default(false)
+  pdfPath           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  masterResume MasterResume? @relation(fields: [masterResumeId], references: [id], onDelete: SetNull)
+
+  @@index([jobId])
+  @@index([isCurrent])
+}
+
+model SkillMatch {
+  id        String    @id @default(uuid())
+  jobId     String
+  skill     String
+  category  String
+  status    String
+  evidence  String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([status])
+}
+
+model TimelineEvent {
+  id          String    @id @default(uuid())
+  jobId       String
+  type        String
+  title       String
+  description String?   @db.Text
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  jobId     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
