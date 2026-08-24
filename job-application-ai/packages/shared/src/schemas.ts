@@ -25,7 +25,7 @@ export const JobSchema = z.object({
   id: z.string().uuid(),
   company: z.string().min(1),
   title: z.string().min(1),
-  url: z.string().url().nullable().optional(),
+  url: z.union([z.string().url(), z.literal('')]).nullable().optional(),
   location: z.string().nullable().optional(),
   employmentType: EmploymentTypeSchema.nullable().optional(),
   salary: z.string().nullable().optional(),

@@ -18,6 +18,23 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: jobappai-migrate
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://jobappai:jobappai@postgres:5432/jobappai
+    command:
+      - sh
+      - -c
+      - npx prisma migrate deploy && node ./scripts/tsx-runner.mjs prisma/seed.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: .
@@ -35,7 +52,7 @@ services:
       STORAGE_PATH: /app/storage
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10485760}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
-      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-2000}
     ports:
       - "3001:3001"
     volumes:
@@ -43,6 +60,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   web:
@@ -50,8 +69,6 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     container_name: jobappai-web
-    environment:
-      VITE_API_URL: http://localhost:3001
     ports:
       - "5173:80"
     depends_on:

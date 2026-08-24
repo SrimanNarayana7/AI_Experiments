@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CreateMasterResumeSchema } from '@repo/shared';
+import { CreateMasterResumeSchema, type MasterResume } from '@repo/shared';
 import { ResumeService } from '../services/jobs/ResumeService';
 import { LocalStorageService } from '../services/storage/LocalStorageService';
 import { PDFService } from '../services/pdf/PDFService';
@@ -8,6 +8,7 @@ import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../prisma';
 import { sanitizeFilename } from '../utils/fileHelpers';
 import { processUploadedResume } from '../utils/resumeUpload';
+import { detectResumeDocumentType } from '../utils/documentExtraction';
 
 const resumeService = new ResumeService();
 const storageService = new LocalStorageService(`${env.STORAGE_PATH}/resumes`);
@@ -25,19 +26,25 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/upload', async (request: FastifyRequest, reply: FastifyReply) => {
     const file = await request.file();
-    if (!file) throw new AppError(400, 'Please upload a PDF or DOCX resume.', 'INVALID_UPLOAD');
+    if (!file || file.fieldname !== 'file') {
+      throw new AppError(400, 'Please upload a PDF or DOCX resume.', 'INVALID_UPLOAD');
+    }
 
-    const buffer = await file.toBuffer();
     const payload = await processUploadedResume({
-      buffer,
+      buffer: await file.toBuffer(),
       filename: file.filename,
       mimeType: file.mimetype,
       storageService,
       storageFolder: 'master',
     });
 
-    const resume = await resumeService.createMaster(payload);
-    return reply.status(201).send({ success: true, data: resume });
+    try {
+      const resume = await resumeService.createMaster(payload);
+      return reply.status(201).send({ success: true, data: resume });
+    } catch (error) {
+      await storageService.delete(payload.storagePath).catch(() => undefined);
+      throw error;
+    }
   });
 
   app.get('/', async (_request: FastifyRequest, reply: FastifyReply) => {
@@ -53,7 +60,10 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
     const versionFilter = query.version ? Number(query.version) : undefined;
     const sort = query.sort ?? 'newest';
 
-    const masterResumes = await resumeService.listMasters();
+    const [masterResumes, activeMaster] = await Promise.all([
+      resumeService.listMasters(),
+      resumeService.getActiveMaster(),
+    ]);
     const jobs = await prisma.job.findMany({
       where: { deletedAt: null },
       include: {
@@ -135,7 +145,7 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({
       success: true,
       data: {
-        masterResume: masterResumes[0] ?? null,
+        masterResume: activeMaster,
         masterResumes,
         companyResumes,
         recentDocuments,
@@ -161,19 +171,19 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
     const resume = await resumeService.getMaster(id);
     if (!resume) throw new AppError(404, 'Resume not found', 'NOT_FOUND');
 
-    let buffer: Buffer;
-    let filename: string;
-
-    if (resume.storagePath && (await storageService.exists(resume.storagePath))) {
-      buffer = await storageService.read(resume.storagePath);
-      filename = resume.originalFilename ?? `${sanitizeFilename(resume.name)}.pdf`;
-    } else {
-      buffer = await pdfService.generateMasterResumeDocument(resume.name, resume.rawText);
-      filename = `${sanitizeFilename(resume.name)}.pdf`;
-    }
+    const hasStoredFile = Boolean(
+      resume.storagePath && (await storageService.exists(resume.storagePath)),
+    );
+    const buffer = hasStoredFile
+      ? await storageService.read(resume.storagePath as string)
+      : await pdfService.generateMasterResumeDocument(resume.name, resume.rawText);
+    const filename = hasStoredFile
+      ? resume.originalFilename ?? `${sanitizeFilename(resume.name)}.pdf`
+      : `${sanitizeFilename(resume.name)}.pdf`;
+    const contentType = hasStoredFile ? resume.mimeType ?? 'application/octet-stream' : 'application/pdf';
 
     return reply
-      .header('Content-Type', resume.mimeType ?? 'application/pdf')
+      .header('Content-Type', contentType)
       .header('Content-Disposition', `attachment; filename="${sanitizeFilename(filename)}"`)
       .send(buffer);
   });
@@ -183,10 +193,15 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
     const resume = await resumeService.getMaster(id);
     if (!resume) throw new AppError(404, 'Resume not found', 'NOT_FOUND');
 
-    const buffer =
-      resume.storagePath && (await storageService.exists(resume.storagePath))
-        ? await storageService.read(resume.storagePath)
-        : await pdfService.generateMasterResumeDocument(resume.name, resume.rawText);
+    const documentType = detectResumeDocumentType(
+      resume.originalFilename ?? undefined,
+      resume.mimeType ?? undefined,
+    );
+    const canPreviewStoredPdf = documentType === 'PDF' && resume.storagePath
+      && (await storageService.exists(resume.storagePath));
+    const buffer = canPreviewStoredPdf
+      ? await storageService.read(resume.storagePath as string)
+      : await pdfService.generateMasterResumeDocument(resume.name, resume.rawText);
 
     return reply
       .header('Content-Type', 'application/pdf')
@@ -212,25 +227,36 @@ export async function resumeRoutes(app: FastifyInstance): Promise<void> {
     if (!existing) throw new AppError(404, 'Resume not found', 'NOT_FOUND');
 
     const file = await request.file();
-    if (!file) throw new AppError(400, 'Please upload a PDF or DOCX resume.', 'INVALID_UPLOAD');
+    if (!file || file.fieldname !== 'file') {
+      throw new AppError(400, 'Please upload a PDF or DOCX resume.', 'INVALID_UPLOAD');
+    }
 
-    const buffer = await file.toBuffer();
     const payload = await processUploadedResume({
-      buffer,
+      buffer: await file.toBuffer(),
       filename: file.filename,
       mimeType: file.mimetype,
       storageService,
       storageFolder: 'master',
     });
 
-    if (existing.storagePath && (await storageService.exists(existing.storagePath))) {
-      await storageService.delete(existing.storagePath);
+    let updated: MasterResume;
+    try {
+      updated = await resumeService.updateMaster(id, {
+        ...payload,
+        isActive: true,
+      });
+    } catch (error) {
+      await storageService.delete(payload.storagePath).catch(() => undefined);
+      throw error;
     }
 
-    const updated = await resumeService.updateMaster(id, {
-      ...payload,
-      isActive: true,
-    });
+    if (
+      existing.storagePath
+      && existing.storagePath !== payload.storagePath
+      && (await storageService.exists(existing.storagePath))
+    ) {
+      await storageService.delete(existing.storagePath);
+    }
 
     return reply.send({ success: true, data: updated });
   });

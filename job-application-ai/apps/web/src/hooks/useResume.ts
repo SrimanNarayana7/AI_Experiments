@@ -4,6 +4,13 @@ import type { MasterResume, ResumeLibraryItem, ResumeVersion } from '@repo/share
 
 const RESUME_KEY = 'resumes';
 
+function requireData<T>(response: ApiResponse<T>): T {
+  if (!response.success || response.data === undefined) {
+    throw new Error(response.error ?? 'The resume request did not return data.');
+  }
+  return response.data;
+}
+
 export function useActiveResume() {
   return useQuery<MasterResume>({
     queryKey: [RESUME_KEY, 'active'],
@@ -53,12 +60,13 @@ export function useUploadResume() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const { data } = await api.post<ApiResponse<MasterResume>>('/api/resumes/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data.data!;
+      const { data } = await api.post<ApiResponse<MasterResume>>('/api/resumes/upload', formData);
+      return requireData(data);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [RESUME_KEY] }),
+    onSuccess: async (resume) => {
+      queryClient.setQueryData([RESUME_KEY, 'active'], resume);
+      await queryClient.invalidateQueries({ queryKey: [RESUME_KEY] });
+    },
   });
 }
 
@@ -66,12 +74,13 @@ export function useReplaceResume() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, formData }: { id: string; formData: FormData }) => {
-      const { data } = await api.post<ApiResponse<MasterResume>>(`/api/resumes/${id}/replace`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data.data!;
+      const { data } = await api.post<ApiResponse<MasterResume>>(`/api/resumes/${id}/replace`, formData);
+      return requireData(data);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [RESUME_KEY] }),
+    onSuccess: async (resume) => {
+      queryClient.setQueryData([RESUME_KEY, 'active'], resume);
+      await queryClient.invalidateQueries({ queryKey: [RESUME_KEY] });
+    },
   });
 }
 

@@ -3,21 +3,22 @@ import type { CreateMasterResumeInput, MasterResume, ResumeVersion } from '@repo
 
 export class ResumeService {
   async createMaster(input: CreateMasterResumeInput): Promise<MasterResume> {
-    await prisma.masterResume.updateMany({ data: { isActive: false } });
-
-    const resume = await prisma.masterResume.create({
-      data: {
-        name: input.name ?? 'Master Resume',
-        content: input.content,
-        rawText: input.rawText,
-        originalFilename: input.originalFilename ?? null,
-        mimeType: input.mimeType ?? null,
-        fileSize: input.fileSize ?? null,
-        storagePath: input.storagePath ?? null,
-        extractedText: input.extractedText ?? null,
-        sourceType: input.sourceType ?? 'manual',
-        isActive: input.isActive ?? true,
-      },
+    const resume = await prisma.$transaction(async (transaction) => {
+      await transaction.masterResume.updateMany({ data: { isActive: false } });
+      return transaction.masterResume.create({
+        data: {
+          name: input.name ?? 'Master Resume',
+          content: input.content,
+          rawText: input.rawText,
+          originalFilename: input.originalFilename ?? null,
+          mimeType: input.mimeType ?? null,
+          fileSize: input.fileSize ?? null,
+          storagePath: input.storagePath ?? null,
+          extractedText: input.extractedText ?? null,
+          sourceType: input.sourceType ?? 'manual',
+          isActive: true,
+        },
+      });
     });
 
     return this.mapMaster(resume);
@@ -34,25 +35,37 @@ export class ResumeService {
   }
 
   async getActiveMaster(): Promise<MasterResume | null> {
-    const resume = await prisma.masterResume.findFirst({ where: { isActive: true } });
+    const resume = await prisma.masterResume.findFirst({
+      where: { isActive: true },
+      orderBy: { updatedAt: 'desc' },
+    });
     return resume ? this.mapMaster(resume) : null;
   }
 
   async updateMaster(id: string, input: CreateMasterResumeInput): Promise<MasterResume> {
-    const resume = await prisma.masterResume.update({
-      where: { id },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.content !== undefined && { content: input.content }),
-        ...(input.rawText !== undefined && { rawText: input.rawText }),
-        ...(input.originalFilename !== undefined && { originalFilename: input.originalFilename }),
-        ...(input.mimeType !== undefined && { mimeType: input.mimeType }),
-        ...(input.fileSize !== undefined && { fileSize: input.fileSize }),
-        ...(input.storagePath !== undefined && { storagePath: input.storagePath }),
-        ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
-        ...(input.sourceType !== undefined && { sourceType: input.sourceType }),
-        ...(input.isActive !== undefined && { isActive: input.isActive }),
-      },
+    const resume = await prisma.$transaction(async (transaction) => {
+      if (input.isActive === true) {
+        await transaction.masterResume.updateMany({
+          where: { id: { not: id } },
+          data: { isActive: false },
+        });
+      }
+
+      return transaction.masterResume.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.content !== undefined && { content: input.content }),
+          ...(input.rawText !== undefined && { rawText: input.rawText }),
+          ...(input.originalFilename !== undefined && { originalFilename: input.originalFilename }),
+          ...(input.mimeType !== undefined && { mimeType: input.mimeType }),
+          ...(input.fileSize !== undefined && { fileSize: input.fileSize }),
+          ...(input.storagePath !== undefined && { storagePath: input.storagePath }),
+          ...(input.extractedText !== undefined && { extractedText: input.extractedText }),
+          ...(input.sourceType !== undefined && { sourceType: input.sourceType }),
+          ...(input.isActive !== undefined && { isActive: input.isActive }),
+        },
+      });
     });
     return this.mapMaster(resume);
   }

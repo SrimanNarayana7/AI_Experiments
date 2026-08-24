@@ -28,7 +28,7 @@ import {
   useReplaceResume,
   useCreateResume,
 } from '../hooks/useResume';
-import { api } from '../services/api';
+import { api, getApiErrorMessage } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '../context/app-context';
 
@@ -67,17 +67,23 @@ export function Resume() {
 
   const onUpload = async (file: File | null) => {
     if (!file) return;
+    uploadResume.reset();
     const formData = new FormData();
     formData.append('file', file);
-    await uploadResume.mutateAsync(formData, {
-      onSuccess: () => {
-        pushToast({
-          title: 'Resume uploaded',
-          description: file.name,
-          tone: 'success',
-        });
-      },
-    });
+    try {
+      await uploadResume.mutateAsync(formData);
+      pushToast({
+        title: 'Resume uploaded',
+        description: file.name,
+        tone: 'success',
+      });
+    } catch (error) {
+      pushToast({
+        title: 'Resume upload failed',
+        description: getApiErrorMessage(error),
+        tone: 'error',
+      });
+    }
   };
 
   const onPasteSave = async () => {
@@ -97,7 +103,17 @@ export function Resume() {
     );
   };
 
-  const filteredCompanyResumes = useMemo(() => companyResumes, [companyResumes]);
+  // Filter the company-resume grid by the search term (matches the API's own
+  // search semantics) so the "Search company or role" box actually narrows results.
+  const filteredCompanyResumes = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return companyResumes;
+    return companyResumes.filter((item) =>
+      [item.company, item.title, item.filename, item.originalFilename]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(needle)),
+    );
+  }, [companyResumes, search]);
 
   if (isLoading) {
     return <LoadingState title="Loading resume library" description="Collecting uploaded documents and generated versions." />;
@@ -148,15 +164,9 @@ export function Resume() {
                 hint="Drag and drop a PDF or DOCX resume, or browse files."
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={onUpload}
+                disabled={uploadResume.isPending}
               />
               {uploadResume.isPending && <UploadProgressBanner label="Uploading resume..." />}
-              {uploadResume.isError && (
-                <ErrorState
-                  title="Resume upload failed"
-                  description="We couldn’t process that file. Please upload a PDF or DOCX resume."
-                  details={uploadResume.error instanceof Error ? uploadResume.error.message : undefined}
-                />
-              )}
             </div>
           ) : (
             <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -201,6 +211,7 @@ export function Resume() {
                     <Button
                       variant="secondary"
                       size="sm"
+                      disabled={isBusy}
                       onClick={() => {
                         setReplaceTarget({
                           id: master.id,
@@ -252,35 +263,34 @@ export function Resume() {
                   type="file"
                   accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="sr-only"
+                  disabled={replaceResume.isPending}
                   onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (file && replaceTarget) {
-                      const formData = new FormData();
-                      formData.append('file', file);
-                      await replaceResume.mutateAsync(
-                        { id: replaceTarget.id, formData },
-                        {
-                          onSuccess: () => {
-                            pushToast({
-                              title: 'Master resume replaced',
-                              description: file.name,
-                              tone: 'success',
-                            });
-                            setReplaceTarget(null);
-                          },
-                        },
-                      );
-                      event.target.value = '';
+                    const input = event.currentTarget;
+                    const file = input.files?.[0];
+                    if (!file || !replaceTarget) return;
+
+                    replaceResume.reset();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      await replaceResume.mutateAsync({ id: replaceTarget.id, formData });
+                      pushToast({
+                        title: 'Master resume replaced',
+                        description: file.name,
+                        tone: 'success',
+                      });
+                    } catch (error) {
+                      pushToast({
+                        title: 'Resume replacement failed',
+                        description: getApiErrorMessage(error),
+                        tone: 'error',
+                      });
+                    } finally {
+                      input.value = '';
+                      setReplaceTarget(null);
                     }
                   }}
                 />
-                {replaceResume.isError && (
-                  <ErrorState
-                    title="Resume replacement failed"
-                    description="We couldn’t replace the master resume. Please try again with a supported PDF or DOCX file."
-                    details={replaceResume.error instanceof Error ? replaceResume.error.message : undefined}
-                  />
-                )}
               </div>
             </div>
           )}

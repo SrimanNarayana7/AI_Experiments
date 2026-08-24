@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+**/dist
+**/*.tsbuildinfo
+
+# Git / VCS
+.git
+.gitignore
+
+# Secrets — never bake into images
+.env
+.env.local
+.env.*.local
+
+# Compose files (not needed inside images)
+docker-compose*.yml
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime storage / uploads
+storage
+
+# Coverage & test artifacts
+coverage
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode
