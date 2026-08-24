@@ -1,4 +1,5 @@
-import { inflateRawSync, inflateSync } from 'pako';
+import { inflateRaw, inflate } from 'pako';
+import type { PDFDocumentProxy, TextItem } from 'pdfjs-dist/types/src/display/api';
 
 export type ResumeDocumentType = 'PDF' | 'DOCX';
 
@@ -34,45 +35,40 @@ export async function extractResumeText(
   return extractDocxText(buffer);
 }
 
-function extractPdfText(buffer: Buffer): string {
-  const content = buffer.toString('latin1');
-  const literalMatches = Array.from(
-    content.matchAll(/\(([^()]*(?:\\.[^()]*)*)\)\s*T[Jj]/g),
-    (match) => decodePdfString(match[1] ?? ''),
-  );
-  const hexMatches = Array.from(content.matchAll(/<([0-9A-Fa-f\s]+)>\s*T[Jj]/g), (match) =>
-    decodePdfHex(match[1] ?? ''),
-  );
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  // pdfjs-dist's legacy build ships as an ES module; a static `await import()`
+  // would be lowered to `require()` by CommonJS compilation and fail on the
+  // ESM `.mjs` file, so invoke a genuine runtime dynamic import instead.
+  const importEsm: (specifier: string) => Promise<{
+    getDocument: typeof import('pdfjs-dist/types/src/display/api').getDocument;
+  }> = new Function('specifier', 'return import(specifier)') as never;
+  const pdfjs = await importEsm('pdfjs-dist/legacy/build/pdf.mjs');
+  const data = Uint8Array.from(buffer);
 
-  const text = [...literalMatches, ...hexMatches]
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .trim();
+  let doc: PDFDocumentProxy | undefined;
+  try {
+    doc = await pdfjs.getDocument({ data, useSystemFonts: true }).promise;
+    const parts: string[] = [];
+    for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+      const page = await doc.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .filter((item): item is TextItem => 'str' in item)
+        .map((item) => item.str)
+        .join(' ');
+      parts.push(pageText);
+      page.cleanup();
+    }
+    const text = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
-  if (text.length < 40) {
-    throw new Error('Unable to extract readable text from this document.');
+    if (text.length < 40) {
+      throw new Error('Unable to extract readable text from this document.');
+    }
+
+    return text;
+  } finally {
+    if (doc) await doc.destroy();
   }
-
-  return text;
-}
-
-function decodePdfString(value: string): string {
-  return value
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r')
-    .replace(/\\t/g, '\t')
-    .replace(/\\b/g, '\b')
-    .replace(/\\f/g, '\f')
-    .replace(/\\\\/g, '\\')
-    .replace(/\\\(/g, '(')
-    .replace(/\\\)/g, ')');
-}
-
-function decodePdfHex(value: string): string {
-  const hex = value.replace(/\s+/g, '');
-  const bytes = Buffer.from(hex.length % 2 === 0 ? hex : `${hex}0`, 'hex');
-  return bytes.toString('utf8').replace(/\u0000/g, '');
 }
 
 function extractDocxText(buffer: Buffer): string {
@@ -136,11 +132,11 @@ function readZipEntry(buffer: Buffer, entryName: string): Buffer | null {
       }
 
       if (compressionMethod === 8) {
-        const inflated = inflateRawSync(compressedData);
+        const inflated = inflateRaw(compressedData);
         return Buffer.from(inflated);
       }
 
-      return Buffer.from(inflateSync(compressedData));
+      return Buffer.from(inflate(compressedData));
     }
 
     offset += 46 + fileNameLength + extraLength + commentLength;

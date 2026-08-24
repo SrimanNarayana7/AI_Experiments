@@ -9,7 +9,11 @@ This version adds the production-focused enhancements from the implementation pl
 - Light, dark, and system theme support
 - Theme persistence with no flash on load
 - Master Resume upload for PDF and DOCX files
-- Resume extraction, storage, download, replace, preview, and delete flows
+- Reliable resume extraction, storage, download, replace, preview, and delete flows
+  - PDF text extraction is isolated from the storage buffer so PDF.js can never detach data needed later for saving (fixes the "detached ArrayBuffer" upload/replace failure)
+  - Uploads are stored under collision-free `storage/resumes/master/` paths, so same-named replacements no longer overwrite or delete the newly uploaded file
+  - Replacement commits the database record before cleaning up the old file, so a failure never loses the prior master
+  - DOCX preview renders a real, generated PDF instead of serving DOCX bytes labeled as PDF
 - Dedicated Resume Library for master and company resumes
 - Resume version history and comparison UI
 - Resume score visualization and score improvement display
@@ -20,6 +24,7 @@ This version adds the production-focused enhancements from the implementation pl
 - A clickable top-right header with notifications and workspace controls
 - Responsive mobile navigation with a drawer sidebar
 - Visual alignment refinements across dashboard, jobs, and resume pages
+- A Playwright end-to-end suite covering the full Master Resume upload / replace / refresh / preview / download flow for both PDF and DOCX
 
 ## Architecture
 
@@ -139,6 +144,47 @@ If PowerShell blocks npm scripts on your machine, run the command from Command P
 cmd /c npm run dev
 ```
 
+## Docker Deployment
+
+Run the entire stack (PostgreSQL, migrations + seed, API, and web) in containers without installing anything except Docker:
+
+```bash
+docker compose up --build -d
+```
+
+What this does:
+
+- `postgres` — PostgreSQL 15 container with a healthcheck.
+- `migrate` — one-shot service that runs `prisma migrate deploy` then seeds the database; exits `0` when done.
+- `api` — Fastify API on `http://localhost:3001`; waits for Postgres to be healthy and the migration to complete.
+- `web` — nginx-served React app on `http://localhost:5173`; nginx proxies `/api` to the API container.
+
+Before the first run, make sure the root `.env` has `DEEPSEEK_API_KEY` (and any other overrides) — compose reads it for the API container.
+
+Inspect status and logs:
+
+```bash
+docker compose ps
+docker compose logs -f migrate   # confirm migrations + seed ran
+docker compose logs -f api
+```
+
+Uploaded resume files are stored in the `./storage` directory on your host (bind-mounted into the API container), separate from the Postgres data volume.
+
+Full teardown (removes containers and the database volume, so the next `up` re-migrates and re-seeds from scratch):
+
+```bash
+docker compose down -v
+```
+
+Other useful commands:
+
+```bash
+docker compose up --build -d   # start (or rebuild + start)
+docker compose stop            # stop without removing anything
+docker compose down            # remove containers, keep the DB volume
+```
+
 ## Useful Scripts
 
 ```bash
@@ -211,7 +257,9 @@ npm run db:seed
 
 ## Testing
 
-Run the full test suite:
+### Unit / API tests
+
+Run across all workspaces:
 
 ```bash
 npm test
@@ -228,6 +276,36 @@ Build production artifacts:
 ```bash
 npm run build
 ```
+
+### End-to-end tests
+
+A Playwright suite in `tests/e2e/` exercises the full application against the running Docker stack (web on `http://localhost:5173`). Before running it, start the stack:
+
+```bash
+docker compose up --build -d
+```
+
+Then run the whole suite:
+
+```bash
+npx playwright test --reporter=list
+```
+
+Run just the Resume Library / Master Resume upload and replace flows:
+
+```bash
+npx playwright test tests/e2e/resume.spec.ts --reporter=list
+```
+
+The resume suite covers, for both **PDF and DOCX**:
+
+- first upload through the real file input,
+- replacement (PDF → DOCX and DOCX → PDF),
+- persistence after a page reload,
+- preview returning an actual PDF (`%PDF` bytes) and file download returning the original document bytes,
+- cleanup and restoration of the original active master resume.
+
+Test fixtures live in `tests/e2e/fixtures/` (`resume.pdf` and `resume.docx`). Note: the suite shares the configured database and storage, so it creates only throwaway master resumes and restores the original active master afterward.
 
 ## Notes
 

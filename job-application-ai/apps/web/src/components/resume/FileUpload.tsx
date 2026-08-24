@@ -6,21 +6,31 @@ export function FileUpload({
   onChange,
   accept,
   multiple = false,
+  disabled = false,
 }: {
   label: string;
   hint: string;
-  onChange: (file: File | null) => void;
+  onChange: (file: File | null) => void | Promise<void>;
   accept: string;
   multiple?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/35 px-6 py-10 text-center transition hover:border-primary/40 hover:bg-muted/60">
+    <label className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/35 px-6 py-10 text-center transition ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary/40 hover:bg-muted/60'}`}>
       <input
         type="file"
         accept={accept}
         multiple={multiple}
+        disabled={disabled}
         className="sr-only"
-        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+        onChange={async (event) => {
+          const input = event.currentTarget;
+          try {
+            await onChange(input.files?.[0] ?? null);
+          } finally {
+            input.value = '';
+          }
+        }}
       />
       <UploadCloud className="h-8 w-8 text-primary" />
       <p className="mt-4 text-base font-semibold text-card-foreground">{label}</p>

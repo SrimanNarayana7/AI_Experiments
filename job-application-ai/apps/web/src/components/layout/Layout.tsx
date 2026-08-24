@@ -416,6 +416,15 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     if (!open) setQuery('');
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
   return (
     <Dialog open={open} title="Search" description="Find jobs, companies, and resume documents." onClose={onClose}>
       <div className="space-y-4">

@@ -18,7 +18,12 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+    >
       <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-[0_32px_96px_rgba(15,23,42,0.28)]">
         <div className="flex items-start justify-between border-b border-border px-5 py-4">
           <div>

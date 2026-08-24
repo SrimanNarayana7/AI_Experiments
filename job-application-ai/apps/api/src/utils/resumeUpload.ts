@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import type { StorageService } from '../services/storage/StorageService';
 import { sanitizeFilename } from './fileHelpers';
+import { AppError } from '../middleware/errorHandler';
 import {
   detectResumeDocumentType,
   extractResumeText,
@@ -25,17 +27,40 @@ export async function processUploadedResume(params: {
   storageService: StorageService;
   storageFolder: string;
 }): Promise<UploadedResumePayload> {
+  const buffer = Buffer.from(params.buffer);
+
   const type = detectResumeDocumentType(params.filename, params.mimeType);
   if (!type) {
-    throw new Error("This file type isn't supported. Please upload a PDF or DOCX resume.");
+    throw new AppError(400, "This file type isn't supported. Please upload a PDF or DOCX resume.", 'INVALID_UPLOAD');
   }
 
-  validateResumeBuffer(params.buffer, type);
-  const extractedText = await extractResumeText(params.buffer, type);
+  let extractionError: string | undefined;
+  try {
+    validateResumeBuffer(buffer, type);
+  } catch (error) {
+    extractionError = error instanceof Error ? error.message : 'This file is not a valid document.';
+  }
+
+  if (extractionError) {
+    throw new AppError(400, extractionError, 'INVALID_UPLOAD');
+  }
+
+  let extractedText: string;
+  try {
+    extractedText = await extractResumeText(buffer, type);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    const message = error instanceof Error ? error.message : 'Unable to read this document.';
+    throw new AppError(400, message, 'INVALID_UPLOAD');
+  }
+
   const safeName = sanitizeFilename(params.filename);
+  const mimeType = type === 'PDF'
+    ? 'application/pdf'
+    : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   const storagePath = await params.storageService.save(
-    `${params.storageFolder}/${safeName}`,
-    params.buffer,
+    `${params.storageFolder}/${randomUUID()}-${safeName}`,
+    buffer,
   );
 
   return {
@@ -43,8 +68,8 @@ export async function processUploadedResume(params: {
     content: extractedText,
     rawText: extractedText,
     originalFilename: params.filename,
-    mimeType: params.mimeType,
-    fileSize: params.buffer.byteLength,
+    mimeType,
+    fileSize: buffer.byteLength,
     storagePath,
     extractedText,
     sourceType: 'upload',

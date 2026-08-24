@@ -30,7 +30,6 @@ pnpm-debug.log*
 storage/
 !storage/.gitkeep
 tmp/
-downloaded_test.pdf
 
 # Testing
 coverage/

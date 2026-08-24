@@ -5,7 +5,7 @@ COPY apps/web/package*.json ./apps/web/
 COPY packages/shared/package*.json ./packages/shared/
 RUN npm ci
 COPY . .
-RUN npm run build --workspace=apps/web
+RUN npm run build --workspace=@repo/shared && npm run build --workspace=apps/web
 
 FROM nginx:alpine
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
