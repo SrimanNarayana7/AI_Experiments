@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Specification {
+  id         String   @id @default(uuid())
+  name       String
+  sourceType String
+  sourceUrl  String?
+  filePath   String?
+  format     String
+  version    String
+  title      String
+  baseUrl    String
+  rawHash    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  endpoints  Endpoint[]
+  scenarios  Scenario[]
+  projects   GeneratedProject[]
+  runs       GenerationRun[]
+}
+
+model Endpoint {
+  id              String  @id @default(uuid())
+  specificationId String
+  path            String
+  method          String
+  operationId     String?
+  summary         String?
+  tags            Json
+  parameters      Json
+  requestBody     Json?
+  responses       Json
+  security        Json?
+
+  specification Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+  scenarios     Scenario[]
+
+  @@index([specificationId])
+}
+
+model Scenario {
+  id                String  @id @default(uuid())
+  specificationId   String
+  endpointId        String
+  type              String
+  name              String
+  inputMutation     Json?
+  expectedStatus    Json
+  expectedAssertions Json
+  source            String
+  createdAt         DateTime @default(now())
+
+  specification Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+  endpoint      Endpoint      @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([specificationId])
+  @@index([endpointId])
+}
+
+model GeneratedProject {
+  id                String   @id @default(uuid())
+  specificationId   String
+  framework         String
+  projectName       String
+  scenarioCount     Int
+  coveragePercentage Int
+  outputPath        String
+  createdAt         DateTime @default(now())
+
+  specification Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+  files         GeneratedFile[]
+  coverage      CoverageReport?
+
+  @@index([specificationId])
+}
+
+model GeneratedFile {
+  id          String  @id @default(uuid())
+  projectId   String
+  path        String
+  content     String
+  createdAt   DateTime @default(now())
+
+  project GeneratedProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model CoverageReport {
+  id                String @id @default(uuid())
+  projectId         String @unique
+  requirements      Json
+  generated         Json
+  coverage          Json
+  uncovered         Json
+  createdAt         DateTime @default(now())
+
+  project GeneratedProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model GenerationRun {
+  id               String    @id @default(uuid())
+  specificationId  String
+  status           String
+  framework        String?
+  scenarioCount    Int
+  coverage         Int
+  error            String?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  specification Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+
+  @@index([specificationId])
+}

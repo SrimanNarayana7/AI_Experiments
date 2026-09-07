@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SDET Blueprint - Transform Your QA Career in 100 Days</title>
+    <meta name="description" content="The complete SDET learning platform with Playwright, Selenium, AI Testing, 100-Day Challenge, live assessments, and portfolio building. From any background to automation expert." />
+    <meta name="author" content="The Testing Academy" />
+    <meta name="keywords" content="SDET, automation testing, Selenium, Playwright, AI testing, QA engineer, software testing, career transformation, 100 day challenge, test automation" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#7c3aed" />
+    <link rel="canonical" href="https://app.thetestingacademy.com" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+
+    <!-- Brand fonts: Sora (display/body) + JetBrains Mono (code/numerals) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+    <meta property="og:title" content="SDET Blueprint - Transform Your QA Career in 100 Days" />
+    <meta property="og:description" content="Master Playwright, Selenium & AI Testing with the 100-Day Challenge. Live assessments, portfolio building, and career transformation for QA engineers." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.thetestingacademy.com" />
+    <meta property="og:site_name" content="SDET Blueprint" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://app.thetestingacademy.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@iaborker" />
+    <meta name="twitter:creator" content="@iaborker" />
+    <meta name="twitter:title" content="SDET Blueprint - Transform Your QA Career in 100 Days" />
+    <meta name="twitter:description" content="Master Playwright, Selenium & AI Testing with the 100-Day Challenge. Live assessments, portfolio building, and career transformation." />
+    <meta name="twitter:image" content="https://app.thetestingacademy.com/og-image.png" />
+
+    <link rel="preconnect" href="https://clerk.thetestingacademy.com" />
+    <link rel="preconnect" href="https://sdetblueprint-api.sdetblueprint.workers.dev" />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+
+    <style>
+      html, body, #root { min-height: 100%; margin: 0; }
+      #app-boot {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 24px;
+        box-sizing: border-box;
+        color: #172033;
+        background: #fbfdfc;
+        font-family: Sora, ui-sans-serif, system-ui, sans-serif;
+        text-align: center;
+      }
+      #app-boot-spinner {
+        width: 38px;
+        height: 38px;
+        border: 3px solid #e5ebe8;
+        border-top-color: #12a166;
+        border-radius: 50%;
+        animation: app-boot-spin 0.8s linear infinite;
+      }
+      #app-boot strong { font-size: 18px; }
+      #app-boot span { color: #667085; font-size: 14px; }
+      @keyframes app-boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #app-boot-spinner { animation-duration: 1.8s; }
+      }
+    </style>
+
+    <!-- Google tag (gtag.js) - GA4 The Testing Academy. Loaded on real hosts
+         only; skipped on localhost / dev tunnels so dev traffic never pollutes GA. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      (function(){
+        var h = location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1' || h.indexOf('trycloudflare.com') !== -1) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-MHBMZE5LCB';
+        document.head.appendChild(s);
+        gtag('js', new Date());
+        gtag('config', 'G-MHBMZE5LCB');
+      })();
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "SDET Blueprint",
+      "alternateName": "The Testing Academy",
+      "url": "https://app.thetestingacademy.com",
+      "logo": "https://app.thetestingacademy.com/favicon.ico",
+      "description": "The complete SDET learning platform with Playwright, Selenium, AI Testing courses and a 100-Day Career Transformation Challenge.",
+      "sameAs": [
+        "https://www.youtube.com/@TheTestingAcademy",
+        "https://github.com/PramodDutta"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "category": "Online Education",
+        "description": "100-Day SDET Challenge with Playwright, Selenium, and AI Testing",
+        "price": "9999",
+        "priceCurrency": "INR",
+        "availability": "https://schema.org/InStock"
+      },
+      "hasCourse": [
+        {
+          "@type": "Course",
+          "name": "Playwright Automation Masterclass",
+          "description": "Complete Playwright test automation course covering TypeScript, API testing, visual testing, and CI/CD integration.",
+          "provider": { "@type": "Organization", "name": "SDET Blueprint" },
+          "educationalLevel": "Beginner to Advanced",
+          "programmingLanguage": "TypeScript"
+        },
+        {
+          "@type": "Course",
+          "name": "Selenium with Java Masterclass",
+          "description": "Comprehensive Selenium WebDriver course with Java, TestNG, Page Object Model, and framework design.",
+          "provider": { "@type": "Organization", "name": "SDET Blueprint" },
+          "educationalLevel": "Beginner to Advanced",
+          "programmingLanguage": "Java"
+        },
+        {
+          "@type": "Course",
+          "name": "AI Testing & Automation",
+          "description": "Learn AI-powered testing with LLMs, MCP, RAG, AI agents, n8n workflows, and LangFlow for QA engineers.",
+          "provider": { "@type": "Organization", "name": "SDET Blueprint" },
+          "educationalLevel": "Intermediate to Advanced"
+        }
+      ]
+    }
+    </script>
+    <script type="module" crossorigin src="/assets/index-DlXjzcIh.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D6-tUiCx.css">
+  </head>
+
+  <body>
+    <div id="root">
+      <div id="app-boot" role="status" aria-live="polite">
+        <div id="app-boot-spinner" aria-hidden="true"></div>
+        <strong>The Testing Academy</strong>
+        <span>Opening your learning workspace...</span>
+      </div>
+    </div>
+    <noscript>This application needs JavaScript enabled. Please enable it and reload the page.</noscript>
+  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f3f042800a1e4fac89355305f7112913","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>

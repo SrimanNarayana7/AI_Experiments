@@ -1,0 +1,562 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAPISpecParser",
+            "id": "OpenAPISpecParser-abc12",
+            "name": "manifest",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "spec",
+            "id": "Prompt Template-abc12",
+            "inputTypes": ["Message"],
+            "type": "str"
+          }
+        },
+        "id": "edge-manifest-to-prompt",
+        "selected": false,
+        "source": "OpenAPISpecParser-abc12",
+        "sourceHandle": "OpenAPISpecParser-abc12-manifest",
+        "target": "Prompt Template-abc12",
+        "targetHandle": "Prompt Template-abc12-spec"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt Template",
+            "id": "Prompt Template-abc12",
+            "name": "prompt",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-abc12",
+            "inputTypes": ["Message"],
+            "type": "str"
+          }
+        },
+        "id": "edge-prompt-to-agent",
+        "selected": false,
+        "source": "Prompt Template-abc12",
+        "sourceHandle": "Prompt Template-abc12-prompt",
+        "target": "Agent-abc12",
+        "targetHandle": "Agent-abc12-input"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-abc12",
+            "name": "response",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-abc12",
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "type": "other"
+          }
+        },
+        "id": "edge-agent-to-chat",
+        "selected": false,
+        "source": "Agent-abc12",
+        "sourceHandle": "Agent-abc12-response",
+        "target": "ChatOutput-abc12",
+        "targetHandle": "ChatOutput-abc12-input"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-abc12",
+            "name": "response",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "input",
+            "id": "WriteFile-abc12",
+            "inputTypes": ["Data", "JSON", "Message"],
+            "type": "other"
+          }
+        },
+        "id": "edge-agent-to-writefile",
+        "selected": false,
+        "source": "Agent-abc12",
+        "sourceHandle": "Agent-abc12-response",
+        "target": "WriteFile-abc12",
+        "targetHandle": "WriteFile-abc12-input"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "note-abc12",
+          "node": {
+            "description": "API Code Generator Agent (Swagger Assistant)\n\nReads an OpenAPI/Swagger spec (URL or uploaded JSON/YAML), deterministically parses and normalizes it, generates contract-driven test scenarios, and uses DeepSeek V4 Flash to produce framework-specific test projects.",
+            "display_name": "",
+            "documentation": "",
+            "template": {}
+          },
+          "type": "note"
+        },
+        "height": 210,
+        "id": "note-abc12",
+        "position": { "x": 60, "y": 60 },
+        "selected": false,
+        "type": "noteNode",
+        "width": 361
+      },
+      {
+        "data": {
+          "id": "OpenAPISpecParser-abc12",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Parses and normalizes an OpenAPI/Swagger specification.",
+            "display_name": "OpenAPI Spec Parser",
+            "documentation": "",
+            "edited": false,
+            "field_order": ["spec_url", "spec_file"],
+            "frozen": false,
+            "icon": "braces",
+            "legacy": false,
+            "lf_version": "1.11.0",
+            "metadata": {
+              "code_hash": "custom-apigen-parser",
+              "module": "custom_components.openapi_spec_parser"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Manifest",
+                "group_outputs": false,
+                "method": "build_manifest",
+                "name": "manifest",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Error",
+                "group_outputs": false,
+                "method": "build_error",
+                "name": "error",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "multiline": true,
+                "name": "code",
+                "required": true,
+                "show": true,
+                "type": "code",
+                "value": "import json\nimport re\nfrom typing import Any\n\nimport httpx\nimport yaml\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n\nclass OpenAPISpecParserComponent(Component):\n    display_name = \"OpenAPI Spec Parser\"\n    description = \"Parses and normalizes an OpenAPI/Swagger specification.\"\n    icon = \"braces\"\n\n    inputs = [\n        MessageTextInput(name=\"spec_url\", display_name=\"Specification URL\", info=\"URL to an OpenAPI/Swagger JSON or YAML file.\"),\n        HandleInput(name=\"spec_file\", display_name=\"Uploaded File\", input_types=[\"Message\"], info=\"Uploaded OpenAPI/Swagger file content.\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Manifest\", name=\"manifest\", method=\"build_manifest\"),\n        Output(display_name=\"Error\", name=\"error\", method=\"build_error\"),\n    ]\n\n    def _load(self) -> str:\n        url = (self.spec_url or \"\").strip()\n        file_content = self.spec_file.text if isinstance(self.spec_file, Message) else \"\"\n        if url:\n            response = httpx.get(url, timeout=30, follow_redirects=True)\n            response.raise_for_status()\n            return response.text\n        if file_content:\n            return file_content\n        return \"\"\n\n    def _parse(self, raw: str) -> dict:\n        text = raw.lstrip()\n        if text.startswith(\"{\") or text.startswith(\"[\"):\n            return json.loads(text)\n        return yaml.safe_load(text)\n\n    def _extract(self, doc: dict) -> dict:\n        endpoints = []\n        paths = doc.get(\"paths\", {})\n        methods = {\"get\", \"post\", \"put\", \"patch\", \"delete\", \"options\", \"head\", \"trace\"}\n        for path, item in paths.items():\n            if not isinstance(item, dict):\n                continue\n            for method in methods:\n                op = item.get(method)\n                if not isinstance(op, dict):\n                    continue\n                responses = []\n                for status, resp in (op.get(\"responses\") or {}).items():\n                    if isinstance(resp, dict):\n                        responses.append({\"status\": status, \"description\": resp.get(\"description\")})\n                endpoints.append({\n                    \"path\": path,\n                    \"method\": method.upper(),\n                    \"operationId\": op.get(\"operationId\"),\n                    \"summary\": op.get(\"summary\"),\n                    \"tags\": op.get(\"tags\", []),\n                    \"parameters\": op.get(\"parameters\", []),\n                    \"requestBody\": op.get(\"requestBody\"),\n                    \"responses\": responses,\n                    \"security\": op.get(\"security\"),\n                })\n\n        servers = []\n        if isinstance(doc.get(\"servers\"), list):\n            servers = [s.get(\"url\") for s in doc[\"servers\"] if isinstance(s, dict) and s.get(\"url\")]\n        elif isinstance(doc.get(\"host\"), str):\n            scheme = (doc.get(\"schemes\") or [\"https\"])[0]\n            base_path = doc.get(\"basePath\", \"\")\n            servers = [f\"{scheme}://{doc['host']}{base_path}\".rstrip(\"/\")]\n\n        spec_format = \"openapi3\" if \"openapi\" in doc else \"swagger2\"\n        format_version = doc.get(\"openapi\") or doc.get(\"swagger\")\n        info = doc.get(\"info\") or {}\n\n        return {\n            \"spec\": {\n                \"title\": info.get(\"title\", \"Untitled API\"),\n                \"version\": info.get(\"version\", \"0.0.0\"),\n                \"format\": spec_format,\n                \"formatVersion\": format_version,\n            },\n            \"servers\": servers,\n            \"securitySchemes\": list((doc.get(\"components\") or {}).get(\"securitySchemes\", {}).keys()) or list((doc.get(\"securityDefinitions\") or {}).keys()),\n            \"endpoints\": endpoints,\n        }\n\n    def build_manifest(self) -> Message:\n        raw = self._load()\n        if not raw:\n            return Message(text=\"No OpenAPI specification provided. Upload a JSON/YAML file or provide a specification URL.\")\n        try:\n            doc = self._parse(raw)\n            manifest = self._extract(doc)\n            return Message(text=json.dumps(manifest, ensure_ascii=False))\n        except Exception as exc:\n            return Message(text=f\"Invalid specification: {exc}\")\n\n    def build_error(self) -> Message:\n        return Message(text=\"\")\n"
+              },
+              "spec_url": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Specification URL",
+                "name": "spec_url",
+                "required": false,
+                "show": true,
+                "type": "str",
+                "value": ""
+              },
+              "spec_file": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Uploaded File",
+                "input_types": ["Message"],
+                "name": "spec_file",
+                "required": false,
+                "show": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "manifest",
+          "showNode": true,
+          "type": "OpenAPISpecParser"
+        },
+        "id": "OpenAPISpecParser-abc12",
+        "position": { "x": 340, "y": 260 },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt Template-abc12",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": { "template": ["spec", "task"] },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt Template",
+            "documentation": "https://docs.langflow.org/components-prompts",
+            "edited": false,
+            "field_order": ["template", "use_double_brackets", "tool_placeholder"],
+            "frozen": false,
+            "icon": "prompts",
+            "legacy": false,
+            "lf_version": "1.11.0",
+            "metadata": { "module": "lfx.components.models_and_agents.prompt.PromptComponent" },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "name": "template",
+                "required": false,
+                "show": true,
+                "type": "prompt",
+                "value": "You are a senior QA automation engineer.\n\nGenerate a framework-specific API test project from the OpenAPI manifest and task below.\n\nMANIFEST:\n{spec}\n\nTASK:\n{task}\n\nRules:\n- Never invent endpoints, methods, fields, or response codes.\n- Use the manifest as the single source of truth.\n- Generate a complete project: README.md, environment config, install + run instructions, test files, and test data.\n- Organize tests by resource/tag.\n- Return ONLY a JSON object with this exact shape:\n{\"framework\": \"playwright|restassured|karate|supertest\", \"projectName\": \"...\", \"files\": [{\"path\": \"...\", \"content\": \"...\"}], \"scenarios\": [], \"coverage\": {\"endpointCoverage\": 0, \"responseCoverage\": 0, \"boundaryCoverage\": 0, \"schemaCoverage\": 0}, \"warnings\": []}\n- No markdown fences, no prose."
+              },
+              "use_double_brackets": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Double Brackets",
+                "name": "use_double_brackets",
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt Template"
+        },
+        "id": "Prompt Template-abc12",
+        "position": { "x": 700, "y": 260 },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Agent-abc12",
+          "node": {
+            "base_classes": ["Data", "JSON", "Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Define the agent's instructions, then enter a task to complete using tools.",
+            "display_name": "Agent",
+            "documentation": "https://docs.langflow.org/agents",
+            "edited": false,
+            "field_order": ["model", "api_key", "system_prompt", "input_value", "handle_parsing_errors", "max_iterations"],
+            "frozen": false,
+            "icon": "bot",
+            "legacy": false,
+            "lf_version": "1.11.0",
+            "metadata": { "module": "lfx.components.models_and_agents.agent.AgentComponent" },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Response",
+                "method": "message_response",
+                "name": "response",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Structured Response",
+                "method": "json_response",
+                "name": "structured_response",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": ["Data", "JSON"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "name": "api_key",
+                "password": true,
+                "required": false,
+                "show": true,
+                "type": "str",
+                "value": "OPENAI_COMPATIBLE_API_KEY"
+              },
+              "handle_parsing_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Handle Parse Errors",
+                "name": "handle_parsing_errors",
+                "type": "bool",
+                "value": true
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "input_types": ["Message"],
+                "name": "input_value",
+                "required": false,
+                "show": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_iterations": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Iterations",
+                "name": "max_iterations",
+                "type": "int",
+                "value": 15
+              },
+              "model": {
+                "_input_type": "ModelInput",
+                "advanced": false,
+                "display_name": "Language Model",
+                "name": "model",
+                "required": true,
+                "show": true,
+                "type": "model",
+                "value": [
+                  {
+                    "icon": "Plug",
+                    "metadata": { "tool_calling": true, "model_type": "llm" },
+                    "name": "deepseek-v4-flash",
+                    "provider": "OpenAI Compatible"
+                  }
+                ]
+              },
+              "system_prompt": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Agent Instructions",
+                "name": "system_prompt",
+                "multiline": true,
+                "required": false,
+                "show": true,
+                "type": "str",
+                "value": "You are a senior QA automation engineer. Produce production-grade, runnable API test projects from OpenAPI manifests. Never fabricate contract details."
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "response",
+          "showNode": true,
+          "type": "Agent"
+        },
+        "id": "Agent-abc12",
+        "position": { "x": 1060, "y": 260 },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-abc12",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": ["input_value"],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "lf_version": "1.11.0",
+            "metadata": { "module": "lfx.components.input_output.chat_output.ChatOutput" },
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "input_types": ["Data", "JSON", "DataFrame", "Table", "Message"],
+                "name": "input_value",
+                "required": true,
+                "show": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "message",
+          "showNode": false,
+          "type": "ChatOutput"
+        },
+        "id": "ChatOutput-abc12",
+        "position": { "x": 1420, "y": 200 },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "WriteFile-abc12",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Writes data to a file.",
+            "display_name": "Write File",
+            "documentation": "https://docs.langflow.org/write-file",
+            "edited": false,
+            "field_order": ["input", "file_name", "file_format", "storage_location"],
+            "frozen": false,
+            "icon": "file-text",
+            "legacy": false,
+            "lf_version": "1.11.0",
+            "metadata": { "module": "lfx.components.data.write_file.WriteFileComponent" },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "File Path",
+                "method": "write_file",
+                "name": "file_path",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "input": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "input_types": ["Data", "JSON", "Message"],
+                "name": "input",
+                "required": true,
+                "show": true,
+                "type": "other",
+                "value": ""
+              },
+              "file_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "File Name",
+                "name": "file_name",
+                "required": true,
+                "show": true,
+                "type": "str",
+                "value": "generated_api_tests"
+              },
+              "file_format": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "display_name": "File Format",
+                "name": "file_format",
+                "options": ["TXT", "JSON", "Markdown"],
+                "type": "str",
+                "value": "TXT"
+              },
+              "storage_location": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Storage Location",
+                "name": "storage_location",
+                "options": ["Local", "AWS", "Google Drive"],
+                "type": "str",
+                "value": "Local"
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "file_path",
+          "showNode": true,
+          "type": "WriteFile"
+        },
+        "id": "WriteFile-abc12",
+        "position": { "x": 1420, "y": 400 },
+        "selected": false,
+        "type": "genericNode"
+      }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 0.8 }
+  },
+  "description": "Reads an OpenAPI/Swagger spec (URL or upload), deterministically parses and normalizes it, generates contract-driven test scenarios, and uses DeepSeek V4 Flash to produce framework-specific test projects.",
+  "endpoint_name": null,
+  "id": "a11c0de0-0000-4000-8000-00000000abc1",
+  "is_component": false,
+  "last_tested_version": "1.11.0",
+  "locked": false,
+  "name": "API Code Generator Agent",
+  "tags": ["api-testing", "openapi", "swagger", "code-generation"]
+}
