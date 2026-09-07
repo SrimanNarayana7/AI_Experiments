@@ -1,0 +1,16 @@
+{
+  "name": "api-code-generator-agent-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "prisma": "^6.19.3"
+  }
+}
