@@ -225,7 +225,7 @@ npm run db:seed
 ### Resume Workflow
 
 - Extract text from uploaded documents
-- Use extracted text as the source for analysis
+- Use the extracted text as the source for analysis
 - Generate optimized company-specific resumes
 - Show before/after score improvements
 - Preview and download generated PDFs
