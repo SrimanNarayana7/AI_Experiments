@@ -6,7 +6,7 @@ The system combines deterministic QA logic (parsing, `$ref` resolution, scenario
 
 ## What it does
 
-- Accepts OpenAPI 3.x and Swagger 2.0 specs as JSON, YAML, or YML.
+- Accepts OpenAPI 3.x and Swagger 2.0 specs as JSON or YAML (`.yml` files included).
 - Ingests specs via file upload or URL.
 - Resolves `$ref` (local, nested, and remote) and normalizes the spec into a compact manifest.
 - Deterministically generates contract-driven test scenarios: happy path, documented responses, missing required fields, boundary values, invalid types, enums, and authentication.
