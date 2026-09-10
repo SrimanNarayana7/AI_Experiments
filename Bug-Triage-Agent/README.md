@@ -27,6 +27,8 @@ Jira + LLM
 
 ## Getting started
 
+Before starting the app, make sure the Bug Triage workflow is running in Langflow and reachable at `VITE_LANGFLOW_BASE_URL` (default `http://localhost:7860`); otherwise the dashboard shows a service-unavailable error.
+
 ```bash
 npm install
 cp .env.example .env        # then edit as needed
