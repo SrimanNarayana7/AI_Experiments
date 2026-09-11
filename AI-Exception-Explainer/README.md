@@ -17,7 +17,7 @@ An AI-powered application that lets developers and QA engineers paste Java excep
   - Best practices
   - Prevention tips
   - Confidence level (High / Medium / Low)
-- **Two LLM providers**: local **Ollama** (auto-detected installed models) and **Groq** (server-side API key)
+- **Two LLM providers**: local **Ollama** (auto-detects installed models) and **Groq** (server-side API key)
 - **Preferences/Settings**: choose provider + default model outside the main form
 - **Multi-model comparison**: run the same input across up to 4 real, installed models
 - **Live model discovery**: the model list comes from the actual Ollama installation — never hardcoded
