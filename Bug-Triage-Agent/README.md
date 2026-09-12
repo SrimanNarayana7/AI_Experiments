@@ -21,7 +21,7 @@ Jira + LLM
 - **Jira issue input** — enter any defect key (e.g. `KAN-13`, `VWO-24`, `PROJ-123`); validates format and supports Enter to submit
 - **Dynamic issue resolution** — the entered key is applied via Langflow `tweaks` so the workflow fetches *that* issue instead of the hardcoded one
 - **Enterprise triage dashboard** — severity (S1–S3) and priority (P1–P3) cards with confidence and reasoning, impact-area tags, root-cause analysis (confirmed facts / hypothesis / unknowns / evidence), and triage justification
-- **Markdown report parser** — normalizes the workflow's free-form markdown report into the structured `BugTriageResult` model, tolerant of both report formats the workflow produces
+- **Markdown report parser** — normalizes the workflow's free-form markdown report into the structured `BugTriageResult` model, and also accepts structured JSON, so it tolerates both response shapes the workflow can return
 - **Friendly error handling** — clear messages for unavailable service, timeouts, unauthorized/forbidden, invalid responses, and **issue-not-found** (e.g. `KAN-15` → "The Jira issue you entered could not be found…")
 - **Dark/light themes**, responsive layout, accessible controls (ARIA live regions, focus states, semantic HTML)
 
