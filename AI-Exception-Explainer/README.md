@@ -26,11 +26,11 @@ An AI-powered application that lets developers and QA engineers paste Java excep
 
 ## 🏗️ Tech Stack
 
-| Layer      | Technology                                  |
-| ---------- | ------------------------------------------- |
-| Frontend   | React 18, Vite 5, plain CSS (dark theme)    |
-| Backend    | Spring Boot 3.3, Java 21, WebFlux WebClient  |
-| AI         | Ollama (local) and Groq (cloud)             |
+| Layer      | Technology                                   |
+| ---------- | -------------------------------------------- |
+| Frontend   | React 18, Vite 5, plain CSS (dark theme)     |
+| Backend    | Spring Boot 3.3, Java 21, Spring WebFlux WebClient |
+| AI         | Ollama (local) and Groq (cloud)              |
 
 ## 📁 Project Structure
 
