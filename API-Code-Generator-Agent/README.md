@@ -116,7 +116,7 @@ npm run lint
 npm run typecheck
 npm run build
 
-cd frontend
+cd ../frontend
 npm run lint
 npm run typecheck
 npm run build
