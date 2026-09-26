@@ -43,5 +43,5 @@ Read the full workflow in [`resume-tailor/SKILL.md`](resume-tailor/SKILL.md).
 
 ## Design notes
 
-`resume-tailor-ui.md` captures the locked design decisions for the web app — LLM layer,
-endpoint shapes, docx renderer, and the three-step frontend flow.
+[`resume-tailor-ui.md`](resume-tailor-ui.md) captures the locked design decisions for the
+web app — LLM layer, endpoint shapes, docx renderer, and the three-step frontend flow.
