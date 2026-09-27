@@ -45,7 +45,7 @@ For first-time users:
 npm install
 ```
 
-2. Start PostgreSQL.
+2. Start PostgreSQL locally (or skip the local setup and use the [Docker Deployment](#docker-deployment) section below).
 
 3. Create a root `.env` file if needed and fill in your values.
 
@@ -190,7 +190,7 @@ docker compose down            # remove containers, keep the DB volume
 ```bash
 npm run dev        # Start web + API
 npm run build      # Build all workspaces
-npm run test       # Run all tests
+npm test           # Run all tests
 npm run typecheck  # TypeScript checks
 npm run lint       # ESLint
 npm run db:generate
