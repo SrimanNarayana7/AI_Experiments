@@ -73,7 +73,7 @@ npm install
 cd ..
 ```
 
-Then start each service:
+Then start each service in a separate terminal (from the project root):
 
 ```bash
 docker compose up -d db
