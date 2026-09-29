@@ -1,3 +1,5 @@
+import { Endpoint } from '../parser/types.js';
+import { hasSecurity, literal, resolvePath, sampleValue, successStatuses } from './schema.js';
 import { GeneratedFile, GenerationInput, groupByTag } from './types.js';
 
 function className(tag: string): string {
@@ -5,12 +7,29 @@ function className(tag: string): string {
   return cleaned ? `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}Test` : 'ApiTest';
 }
 
-function renderRestAssuredTest(
-  tag: string,
-  endpoints: { path: string; method: string; operationId?: string; summary?: string }[],
-  baseUrl: string,
-): string {
+function methodName(endpoint: Endpoint): string {
+  const base =
+    endpoint.operationId ?? `${endpoint.method}${endpoint.path.replace(/[^a-zA-Z0-9]+/g, '')}`;
+  return base.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function requestBodyJson(endpoint: Endpoint): string | undefined {
+  if (endpoint.requestBody) {
+    return literal(sampleValue(endpoint.requestBody, 'payload'));
+  }
+  const formParams = endpoint.parameters.filter((p) => p.in === 'formData' && p.type !== 'file');
+  if (formParams.length > 0) {
+    const fields: Record<string, unknown> = {};
+    for (const p of formParams) fields[p.name] = sampleValue(p.schema, p.name);
+    return literal(fields);
+  }
+  return undefined;
+}
+
+function renderRestAssuredTest(tag: string, endpoints: Endpoint[], baseUrl: string): string {
   const lines: string[] = [];
+  const needsAuth = endpoints.some(hasSecurity);
+
   lines.push(`package com.example.tests;`);
   lines.push('');
   lines.push(`import io.restassured.RestAssured;`);
@@ -31,16 +50,25 @@ function renderRestAssuredTest(
   lines.push('');
 
   for (const e of endpoints) {
-    const method = e.method.toLowerCase();
-    const testName = e.operationId ?? `${e.method}${e.path.replace(/[^a-zA-Z0-9]+/g, '')}`;
+    const status = successStatuses(e)[0] ?? 200;
+    const body = requestBodyJson(e);
+
     lines.push(`    @Test`);
-    lines.push(`    public void ${testName.replace(/[^a-zA-Z0-9]/g, '_')}() {`);
+    lines.push(`    public void ${methodName(e)}() {`);
     lines.push(`        given()`);
-    lines.push(`            .header("Authorization", "Bearer " + System.getenv("BEARER_TOKEN"))`);
+    if (needsAuth) {
+      lines.push(
+        `            .header("Authorization", "Bearer " + System.getenv("BEARER_TOKEN"))`,
+      );
+    }
+    lines.push(`            .contentType(ContentType.JSON)`);
+    if (body !== undefined) {
+      lines.push(`            .body("""${body}""")`);
+    }
     lines.push(`            .when()`);
-    lines.push(`            .${method}("${e.path}")`);
+    lines.push(`            .${e.method.toLowerCase()}("${resolvePath(e)}")`);
     lines.push(`            .then()`);
-    lines.push(`            .statusCode(200)`);
+    lines.push(`            .statusCode(${status})`);
     lines.push(`            .body(notNullValue());`);
     lines.push(`    }`);
     lines.push('');
@@ -103,7 +131,31 @@ export function generateRestAssured(input: GenerationInput): GeneratedFile[] {
 
   files.push({
     path: 'README.md',
-    content: `# ${input.projectName}\n\nREST Assured API test project generated from the OpenAPI contract.\n\n## Install\n\`\`\`bash\nmvn install\n\`\`\`\n\n## Configure\nSet \`API_BASE_URL\` and authentication environment variables.\n\n## Run\n\`\`\`bash\nmvn test\n\`\`\`\n`,
+    content: `# ${input.projectName}
+
+REST Assured API test project generated from the OpenAPI contract.
+
+## Prerequisites
+
+- Java 17+
+- Maven 3.9+
+
+## Configure
+
+Set the environment variables (or export them in your shell):
+
+\`\`\`bash
+export API_BASE_URL="${input.baseUrl || '<api base url>'}"
+export BEARER_TOKEN=""
+export API_KEY=""
+\`\`\`
+
+## Run
+
+\`\`\`bash
+mvn test
+\`\`\`
+`,
   });
 
   for (const [tag, endpoints] of groups) {

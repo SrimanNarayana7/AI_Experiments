@@ -965,29 +965,34 @@ Example:
 
 ```text
 api-tests/
-├── package.json
-├── playwright.config.ts
-├── tests/
-│   ├── users.spec.ts
-│   ├── products.spec.ts
-│   └── orders.spec.ts
-├── test-data/
-│   └── generated-data.ts
+├── package.json              test / typecheck / lint / format scripts
+├── tsconfig.json
+├── eslint.config.mjs
+├── .prettierrc.json
+├── .gitignore
+├── playwright.config.ts      baseURL + auth headers from environment
+├── config/env.ts             typed environment configuration
+├── types/api.ts              TypeScript models derived from the contract
+├── lib/api/<tag>.client.ts   typed API client per resource
+├── lib/factories/<tag>.factory.ts  schema-driven test data factories
+├── tests/<tag>.spec.ts       one spec per resource/tag
 ├── .env.example
 └── README.md
 ```
 
 Use Playwright APIRequest / `request`.
 
-Tests should include:
+Tests must:
 
-* request setup
-* API calls
-* status assertions
-* response body assertions
-* schema validation where practical
-* test data
-* authentication configuration
+* import each dependency once per file (no repeated imports)
+* read the base URL from Playwright config, never hardcode URLs in tests
+* substitute every `{param}` path placeholder with a contract-derived value
+* send valid request bodies built from the contract schema (examples, defaults, enums first)
+* assert documented status codes instead of hardcoded 200s
+* assert response body shapes against the documented response schema
+* handle authentication through environment variables and skip tests that require unconfigured credentials
+* generate negative tests from the deterministic scenario matrix (missing required fields, invalid types, enums, boundaries)
+* clean up created resources where the contract supports deletion
 
 ---
 

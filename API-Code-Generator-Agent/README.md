@@ -13,6 +13,41 @@ The system combines deterministic QA logic (parsing, `$ref` resolution, scenario
 - Generates runnable projects for Playwright, REST Assured, Karate, and Supertest.
 - Produces a coverage report that never claims false 100%.
 
+## Generated Playwright project
+
+Playwright output is enterprise-grade and follows standard TypeScript practices:
+
+```text
+api-tests/
+├── package.json              test / typecheck / lint / format scripts
+├── tsconfig.json
+├── eslint.config.mjs
+├── .prettierrc.json
+├── .gitignore
+├── playwright.config.ts      baseURL + auth headers from environment
+├── config/env.ts             typed environment configuration
+├── types/api.ts              TypeScript models derived from the contract
+├── lib/api/<tag>.client.ts   typed API client per resource
+├── lib/factories/<tag>.factory.ts  schema-driven test data factories
+├── tests/<tag>.spec.ts       one spec per resource/tag
+├── .env.example
+└── README.md
+```
+
+Generated tests:
+
+- have a single import block per file (no repeated imports),
+- read the base URL from Playwright config and never hardcode URLs,
+- substitute every `{param}` path placeholder with a contract-derived value,
+- send valid request bodies built from the contract schema (examples, defaults, enums first),
+- assert documented status codes instead of hardcoded 200s,
+- validate response body shapes against the documented schema,
+- handle authentication via environment variables and skip tests that require unconfigured credentials,
+- include negative tests derived from the deterministic scenario matrix,
+- clean up created resources where the contract supports deletion.
+
+Generated projects compile clean (`tsc --noEmit`) and pass `eslint .` out of the box.
+
 ## Architecture
 
 ```

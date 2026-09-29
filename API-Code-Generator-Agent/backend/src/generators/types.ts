@@ -1,4 +1,4 @@
-import { ApiManifest, Framework } from '../parser/types.js';
+import { ApiManifest, Endpoint, Framework } from '../parser/types.js';
 import { TestScenario } from '../scenarios/index.js';
 
 export interface GeneratedFile {
@@ -30,20 +30,13 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export function groupByTag(
-  manifest: ApiManifest,
-): Map<string, { path: string; method: string; operationId?: string; summary?: string }[]> {
-  const map = new Map<string, { path: string; method: string; operationId?: string; summary?: string }[]>();
+export function groupByTag(manifest: ApiManifest): Map<string, Endpoint[]> {
+  const map = new Map<string, Endpoint[]>();
   for (const endpoint of manifest.endpoints) {
     const tags = endpoint.tags.length ? endpoint.tags : ['default'];
     for (const tag of tags) {
       const list = map.get(tag) ?? [];
-      list.push({
-        path: endpoint.path,
-        method: endpoint.method,
-        operationId: endpoint.operationId,
-        summary: endpoint.summary,
-      });
+      list.push(endpoint);
       map.set(tag, list);
     }
   }
