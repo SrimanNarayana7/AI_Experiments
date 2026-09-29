@@ -1,7 +1,7 @@
 # AI Resume Tailor
 
-Tailor an existing resume to a specific job description — honestly, ATS-safe, and with
-every change visible so the candidate can approve it.
+Tailor an existing resume to a specific job description — honestly, in an ATS-safe way,
+and with every change visible so the candidate can approve it.
 
 Two pieces live here:
 
