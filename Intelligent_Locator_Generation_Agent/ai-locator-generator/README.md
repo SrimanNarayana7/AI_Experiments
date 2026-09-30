@@ -110,6 +110,7 @@ Backend configuration lives in `backend/.env` (copy `backend/.env.example` and e
 | `BATCH_MAX_TOKENS` | token budget per LangFlow batch, default `6000` |
 | `BATCH_MAX_BATCHES` | hard cap on batch count, default `12` |
 | `BATCH_CONCURRENCY` | concurrent batch requests, default `3` |
+| `MAX_HTML_CHARS` | raw HTML size cap, default `2000000` |
 
 Frontend: `VITE_API_URL` defaults to `http://localhost:4000`; the Vite dev server proxies `/api` to it, so no frontend env file is needed for local development.
 

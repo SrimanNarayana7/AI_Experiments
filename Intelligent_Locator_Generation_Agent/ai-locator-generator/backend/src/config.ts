@@ -21,7 +21,9 @@ export const config = {
     timeoutMs: Number(process.env.LANGFLOW_TIMEOUT_MS ?? 120_000),
   },
   limits: {
-    maxHtmlChars: 200_000,
+    // Raw HTML cap. The LLM only ever receives the extracted element list
+    // (batched by token budget), so raw size is not a context-window concern.
+    maxHtmlChars: Number(process.env.MAX_HTML_CHARS ?? 2_000_000),
     maxElements: 150,
     maxTokens: 4096,
   },
