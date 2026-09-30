@@ -18,7 +18,7 @@ export const config = {
     baseUrl: process.env.LANGFLOW_BASE_URL ?? "http://localhost:7860",
     flowId: process.env.LANGFLOW_FLOW_ID ?? "",
     apiKey: process.env.LANGFLOW_API_KEY ?? "",
-    timeoutMs: Number(process.env.LANGFLOW_TIMEOUT_MS ?? 120_000),
+    timeoutMs: Number(process.env.LANGFLOW_TIMEOUT_MS ?? 300_000),
   },
   limits: {
     // Raw HTML cap. The LLM only ever receives the extracted element list

@@ -105,7 +105,7 @@ Backend configuration lives in `backend/.env` (copy `backend/.env.example` and e
 | `LANGFLOW_BASE_URL` | default `http://localhost:7860` |
 | `LANGFLOW_FLOW_ID` | flow id after importing into LangFlow Desktop |
 | `LANGFLOW_API_KEY` | LangFlow API key (Desktop 1.11 requires one) |
-| `LANGFLOW_TIMEOUT_MS` | default `120000` |
+| `LANGFLOW_TIMEOUT_MS` | per-run timeout, default `300000` (5 min) |
 | `PORT` | backend port, default `4000` |
 | `BATCH_MAX_TOKENS` | token budget per LangFlow batch, default `6000` |
 | `BATCH_MAX_BATCHES` | hard cap on batch count, default `12` |
