@@ -572,13 +572,25 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
         </AnimatePresence>
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4 pb-2 text-[11px] text-faint">
-        <span>
-          {FRAMEWORK_LABELS[framework]} · {LANGUAGE_LABELS[language]} · LangFlow pipeline
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Braces className="h-3 w-3" /> AI Locator Generator
-        </span>
+      <footer className="mt-4 rounded-2xl border border-line bg-surface/60 backdrop-blur">
+        <div className="flex flex-col items-center justify-between gap-3 px-6 py-5 text-center sm:flex-row sm:text-left">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold text-ink">
+              AI Locator Generator<span className="align-super text-[10px] text-muted">™</span>
+            </p>
+            <p className="text-[11px] leading-relaxed text-faint">
+              Developed by <span className="font-medium text-muted">Srimannarayana Kode</span> · All rights reserved
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-1 sm:items-end">
+            <p className="text-[11px] text-faint">
+              © {new Date().getFullYear()} Srimannarayana Kode · Registered trademark
+            </p>
+            <p className="flex items-center gap-1.5 text-[11px] text-faint">
+              <Braces className="h-3 w-3" /> {FRAMEWORK_LABELS[framework]} · {LANGUAGE_LABELS[language]} · LangFlow pipeline
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );
