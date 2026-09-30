@@ -1,29 +1,46 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Braces, Check, CircleAlert, ScanSearch, Search, Sparkles } from "lucide-react";
+import {
+  Braces,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Download,
+  FileCode2,
+  FileJson2,
+  FileText,
+  FolderOpen,
+  ScanSearch,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { AnalysisSummary } from "../components/analysis/AnalysisSummary";
 import { InsightList, type InsightFilter } from "../components/analysis/InsightList";
 import { isStructuralStrategy, isTestAttributeStrategy } from "../components/analysis/StabilityScore";
+import { CodeViewer } from "../components/code/CodeViewer";
 import { JsonViewer } from "../components/code/JsonViewer";
 import { PageObjectViewer } from "../components/code/PageObjectViewer";
 import { Button } from "../components/common/Button";
+import { CopyButton } from "../components/common/CopyButton";
 import { Tabs } from "../components/common/Tabs";
 import { DomEditor } from "../components/input/DomEditor";
 import { InputToolbar } from "../components/input/InputToolbar";
 import { UrlInput } from "../components/input/UrlInput";
 import { LocatorCard } from "../components/locators/LocatorCard";
+import { downloadProjectZip } from "../services/api";
 import { SAMPLE_HTML } from "../samples";
 import {
   FRAMEWORK_LABELS,
   LANGUAGE_LABELS,
   SUPPORTED_LANGUAGES,
   type Framework,
+  type GeneratedFile,
   type Language,
 } from "../types/locator";
 import { PROGRESS_STEPS, useLocatorAnalysis, type AnalyzeInput } from "../hooks/useLocatorAnalysis";
 
 type InputMode = "html" | "url";
-type ResultTab = "overview" | "elements" | "pom" | "json";
+type ResultTab = "overview" | "elements" | "pom" | "files" | "json";
 
 interface LocatorGeneratorProps {
   framework: Framework;
@@ -45,8 +62,10 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
   const [tab, setTab] = useState<ResultTab>("overview");
   const [query, setQuery] = useState("");
   const [insightFilter, setInsightFilter] = useState<InsightFilter | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
-  const { analysis, loading, error, elapsedMs, progressStep, analyze, clear } = useLocatorAnalysis();
+  const { analysis, files, project, processing, domStats, analysisId, loading, error, elapsedMs, progressStep, analyze, clear } =
+    useLocatorAnalysis();
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const canRun = (mode === "html" && html.trim() !== "") || (mode === "url" && pageUrl.trim() !== "");
@@ -72,11 +91,12 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
     if (!analysis) return [];
     const q = query.trim().toLowerCase();
     return analysis.elements.filter((el) => {
-      if (insightFilter === "stable" && el.primary.score < 80) return false;
+      const score = el.finalScore ?? el.primary.score;
+      if (insightFilter === "stable" && score < 80) return false;
       if (insightFilter === "structural" && !isStructuralStrategy(el)) return false;
       if (
         insightFilter === "needsTestid" &&
-        (isTestAttributeStrategy(el.primary.strategy) || el.primary.score >= 90)
+        (isTestAttributeStrategy(el.primary.strategy) || score >= 90)
       ) {
         return false;
       }
@@ -89,6 +109,21 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
       );
     });
   }, [analysis, query, insightFilter]);
+
+  const fileGroups = useMemo(() => {
+    const groups: { label: string; files: GeneratedFile[] }[] = [
+      { label: "Pages", files: files.filter((f) => f.kind === "page") },
+      { label: "Components", files: files.filter((f) => f.kind === "component") },
+      { label: "Tabs", files: files.filter((f) => f.kind === "tab") },
+      { label: "Project", files: files.filter((f) => ["config", "report", "readme"].includes(f.kind)) },
+    ];
+    return groups.filter((g) => g.files.length > 0);
+  }, [files]);
+
+  const selectedFileContent = useMemo(
+    () => files.find((f) => f.path === selectedFile) ?? null,
+    [files, selectedFile],
+  );
 
   function switchLanguage(next: Language) {
     if (!analysis) return;
@@ -208,36 +243,90 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
               </motion.div>
             ) : loading ? (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-3 py-6">
-                {PROGRESS_STEPS.map((step, i) => {
-                  const state = progressStep > i ? "done" : progressStep === i ? "active" : "pending";
-                  return (
-                    <motion.div
-                      key={step}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-center gap-3"
-                    >
+                {processing.batched ? (
+                  <>
+                    {PROGRESS_STEPS.slice(0, 2).map((step) => (
+                      <div key={step} className="flex items-center gap-3">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-success/40 bg-success/10 text-success">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="text-sm text-ink">{step}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3">
                       <span
                         className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${
-                          state === "done"
+                          processing.completedBatches >= processing.batchCount
                             ? "border-success/40 bg-success/10 text-success"
-                            : state === "active"
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-line-strong text-faint"
+                            : "border-primary/40 bg-primary/10 text-primary"
                         }`}
                       >
-                        {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                        {processing.completedBatches >= processing.batchCount ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        )}
                       </span>
-                      <span className={`text-sm ${state === "pending" ? "text-faint" : "text-ink"}`}>{step}</span>
-                      {state === "active" && <span className="shimmer h-3 w-24 rounded bg-line" />}
-                    </motion.div>
-                  );
-                })}
+                      <span className="text-sm text-ink">
+                        Analyzing batches — {Math.min(processing.completedBatches, processing.batchCount)} / {processing.batchCount}
+                      </span>
+                      <span className="shimmer h-3 w-24 rounded bg-line" />
+                    </div>
+                    <p className="pl-9 text-xs text-muted">
+                      Large DOM detected: automatically analyzed in {processing.batchCount} batches, then merged and
+                      globally ranked.
+                    </p>
+                  </>
+                ) : (
+                  PROGRESS_STEPS.map((step, i) => {
+                    const state = progressStep > i ? "done" : progressStep === i ? "active" : "pending";
+                    return (
+                      <motion.div
+                        key={step}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="flex items-center gap-3"
+                      >
+                        <span
+                          className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${
+                            state === "done"
+                              ? "border-success/40 bg-success/10 text-success"
+                              : state === "active"
+                                ? "border-primary/40 bg-primary/10 text-primary"
+                                : "border-line-strong text-faint"
+                          }`}
+                        >
+                          {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                        </span>
+                        <span className={`text-sm ${state === "pending" ? "text-faint" : "text-ink"}`}>{step}</span>
+                        {state === "active" && <span className="shimmer h-3 w-24 rounded bg-line" />}
+                      </motion.div>
+                    );
+                  })
+                )}
               </motion.div>
             ) : analysis ? (
               <motion.div key="success" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col gap-4">
                 <AnalysisSummary summary={analysis.summary} elapsedMs={elapsedMs} />
+                {domStats && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-surface/50 px-3 py-2 text-[11px] text-muted">
+                    <span>
+                      DOM: <span className="font-medium text-ink">{(domStats.htmlChars / 1024).toFixed(1)} KB</span>
+                    </span>
+                    <span>
+                      Est. tokens: <span className="font-medium text-ink">{domStats.estimatedTokens.toLocaleString()}</span>
+                    </span>
+                    <span>
+                      Elements: <span className="font-medium text-ink">{processing.elementsExtracted}</span>
+                    </span>
+                    {processing.batched && (
+                      <span>
+                        Batches: <span className="font-medium text-ink">{processing.batchCount}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">Insights</p>
                   <InsightList elements={analysis.elements} activeFilter={insightFilter} onFilter={setInsightFilter} />
@@ -286,6 +375,7 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
                     { id: "overview", label: "Overview" },
                     { id: "elements", label: `Elements (${analysis.elements.length})` },
                     { id: "pom", label: "Page Object" },
+                    { id: "files", label: `Generated Files (${files.length})` },
                     { id: "json", label: "Raw JSON" },
                   ]}
                   active={tab}
@@ -337,7 +427,7 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">Top locators</p>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                           {[...analysis.elements]
-                            .sort((a, b) => b.primary.score - a.primary.score)
+                            .sort((a, b) => (b.finalScore ?? b.primary.score) - (a.finalScore ?? a.primary.score))
                             .slice(0, 6)
                             .map((el, i) => (
                               <button
@@ -347,7 +437,7 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="truncate text-xs font-medium text-ink">{el.element}</span>
-                                  <span className="text-[11px] tabular-nums text-muted">{el.primary.score}</span>
+                                  <span className="text-[11px] tabular-nums text-muted">{el.finalScore ?? el.primary.score}</span>
                                 </div>
                                 <code className="mono mt-1.5 block truncate text-[11px] text-faint group-hover:text-muted">
                                   {el.primary.locator}
@@ -394,6 +484,85 @@ export function LocatorGenerator({ framework, language, onFrameworkChange, onLan
                         No Page Object class was generated.
                       </p>
                     ))}
+
+                  {tab === "files" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-muted">
+                          {project
+                            ? `${project.pages} ${project.pages === 1 ? "page" : "pages"} · ${project.components} ${project.components === 1 ? "component" : "components"} · ${project.tabs} ${project.tabs === 1 ? "tab" : "tabs"} · ${project.fileCount} files`
+                            : `${files.length} generated files`}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={!analysisId}
+                          onClick={() => {
+                            if (analysisId) void downloadProjectZip(analysisId).catch(() => undefined);
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" /> Download Automation Project
+                        </Button>
+                      </div>
+
+                      {files.length === 0 ? (
+                        <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
+                          No generated files yet.
+                        </p>
+                      ) : (
+                        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+                          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/70 p-3">
+                            {fileGroups.map((group) => (
+                              <div key={group.label}>
+                                <p className="mb-1 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
+                                  <FolderOpen className="h-3 w-3" /> {group.label}
+                                </p>
+                                <ul className="flex flex-col gap-0.5">
+                                  {group.files.map((file) => (
+                                    <li key={file.path}>
+                                      <button
+                                        onClick={() => setSelectedFile(file.path)}
+                                        className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
+                                          selectedFile === file.path
+                                            ? "bg-primary/10 text-ink"
+                                            : "text-muted hover:bg-hover hover:text-ink"
+                                        }`}
+                                      >
+                                        {file.kind === "report" ? (
+                                          <FileJson2 className="h-3.5 w-3.5 shrink-0" />
+                                        ) : file.kind === "readme" ? (
+                                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                                        ) : (
+                                          <FileCode2 className="h-3.5 w-3.5 shrink-0" />
+                                        )}
+                                        <span className="mono truncate">{file.path}</span>
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div>
+                            {selectedFileContent ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="mono text-xs text-muted">{selectedFileContent.path}</span>
+                                  <CopyButton text={selectedFileContent.content} />
+                                </div>
+                                <CodeViewer code={selectedFileContent.content} filename={selectedFileContent.path} stickyHeader />
+                              </div>
+                            ) : (
+                              <p className="flex items-center gap-2 rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
+                                <ChevronRight className="h-4 w-4" /> Select a file to preview it.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {tab === "json" && <JsonViewer data={analysis} />}
                 </motion.div>

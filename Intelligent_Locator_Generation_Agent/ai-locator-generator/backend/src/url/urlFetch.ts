@@ -21,6 +21,16 @@ function isPrivateAddress(address: string): boolean {
   return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80");
 }
 
+export async function assertPublicHost(hostname: string): Promise<void> {
+  if (BLOCKED_HOSTNAMES.has(hostname.toLowerCase())) {
+    throw new UrlFetchError("Fetching localhost is not allowed.");
+  }
+  const addresses = await dns.lookup(hostname, { all: true });
+  if (addresses.some((a) => isPrivateAddress(a.address))) {
+    throw new UrlFetchError("Fetching private network addresses is not allowed.");
+  }
+}
+
 export interface FetchedPage {
   html: string;
   note: string;
@@ -36,14 +46,7 @@ export async function fetchPageHtml(url: string): Promise<FetchedPage> {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new UrlFetchError("Only http and https URLs are supported.");
   }
-  if (BLOCKED_HOSTNAMES.has(parsed.hostname.toLowerCase())) {
-    throw new UrlFetchError("Fetching localhost is not allowed.");
-  }
-
-  const addresses = await dns.lookup(parsed.hostname, { all: true });
-  if (addresses.some((a) => isPrivateAddress(a.address))) {
-    throw new UrlFetchError("Fetching private network addresses is not allowed.");
-  }
+  await assertPublicHost(parsed.hostname);
 
   let current = parsed.toString();
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
@@ -70,6 +73,7 @@ export async function fetchPageHtml(url: string): Promise<FetchedPage> {
       const location = response.headers.get("location");
       if (!location) throw new UrlFetchError("Redirect without a location header.");
       current = new URL(location, parsed).toString();
+      await assertPublicHost(new URL(current).hostname);
       continue;
     }
     if (!response.ok) {

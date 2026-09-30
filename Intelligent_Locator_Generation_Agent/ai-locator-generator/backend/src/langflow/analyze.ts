@@ -8,6 +8,7 @@ export interface LangflowAnalysisInput {
   elementList: string;
   warnings: string[];
   sourceNote: string;
+  contextNote?: string;
 }
 
 export async function analyzeViaLangflow(input: LangflowAnalysisInput): Promise<LocatorAnalysis> {
@@ -17,6 +18,7 @@ export async function analyzeViaLangflow(input: LangflowAnalysisInput): Promise<
     elementList: input.elementList,
     warnings: input.warnings,
     sourceNote: input.sourceNote,
+    contextNote: input.contextNote ?? "",
   };
 
   const response = await runLangflow(JSON.stringify(payload));

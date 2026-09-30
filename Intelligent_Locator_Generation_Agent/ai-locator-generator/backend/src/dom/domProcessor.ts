@@ -54,11 +54,21 @@ const KEEP_ATTRIBUTES = new Set([
   "data-cy",
 ]);
 
+/** Structural context captured per element, used for batching and page/component/tab ownership. */
+export interface ElementContext {
+  form?: string;
+  section?: string;
+  container?: "nav" | "header" | "footer" | "tablist";
+  repeatedClass?: string;
+}
+
 export interface ProcessedElement {
   index: number;
+  elementId: string;
   tag: string;
   attributes: Record<string, string>;
   text: string;
+  context: ElementContext;
 }
 
 export interface ProcessedDom {
@@ -133,6 +143,49 @@ function resolveRole(attributes: Record<string, string>, tag: string): string {
   return "";
 }
 
+const HEADING_ANCHOR = /^(h1|h2|h3|h4)$/;
+
+function captureContext($el: any, $: any): ElementContext {
+  const context: ElementContext = {};
+  const form = $el.parents("form").first();
+  if (form.length > 0) {
+    context.form = form.attr("id") || form.attr("name") || form.attr("aria-label") || "";
+  }
+  const nav = $el.parents("nav").first();
+  const header = $el.parents("header").first();
+  const footer = $el.parents("footer").first();
+  const tablist = $el.parents('[role="tablist"]').first();
+  if (nav.length > 0) context.container = "nav";
+  else if (header.length > 0) context.container = "header";
+  else if (footer.length > 0) context.container = "footer";
+  else if (tablist.length > 0) context.container = "tablist";
+
+  const section = $el
+    .parents()
+    .toArray()
+    .map((p: any) => $(p))
+    .find((p: any) => {
+      const ariaLabel = p.attr("aria-label");
+      if (ariaLabel) return true;
+      const role = p.attr("role");
+      if (role && !["presentation", "group"].includes(role)) return true;
+      const firstHeading = p.children().first();
+      return firstHeading.length > 0 && HEADING_ANCHOR.test((firstHeading[0] as any).tagName ?? "");
+    });
+  if (section) {
+    context.section =
+      section.attr("aria-label") ||
+      section.attr("role") ||
+      section.children().first().text().replace(/\s+/g, " ").trim().slice(0, 80) ||
+      "";
+  }
+
+  const cls = ($el.attr("class") ?? "").trim();
+  if (cls) context.repeatedClass = cls.split(/\s+/).sort().join(" ");
+
+  return context;
+}
+
 /**
  * Extract interactive elements from HTML. Returns normalized metadata only —
  * the LLM never receives raw attribute values that are not in the original DOM.
@@ -148,6 +201,7 @@ export function extractInteractiveElements(rawHtml: string, maxElements = 150): 
 
   const elements: ProcessedElement[] = [];
   let truncated = false;
+  let counter = 0;
 
   $("*").each(function (this: any, index: number) {
     if (elements.length >= maxElements) {
@@ -160,10 +214,13 @@ export function extractInteractiveElements(rawHtml: string, maxElements = 150): 
     if (resolvedRole) attributes.role = resolvedRole;
     elements.push({
       index,
+      elementId: `el-${String(counter).padStart(4, "0")}`,
       tag: (this.tagName ?? "").toLowerCase(),
       attributes,
       text: visibleText($(this), $),
+      context: captureContext($(this), $),
     });
+    counter++;
   });
 
   return { elementCount: elements.length, elements, truncated, hadNoiseRemoved };

@@ -1,4 +1,4 @@
-import type { AnalyzeResponse, Framework, Language } from "../types/locator";
+import type { AnalysisState, AnalyzeResult, Framework, Language } from "../types/locator";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
@@ -7,18 +7,41 @@ export async function analyzeLocators(input: {
   pageUrl?: string;
   framework: Framework;
   language: Language;
-}): Promise<AnalyzeResponse> {
+}): Promise<AnalyzeResult> {
   const response = await fetch(`${API_BASE}/api/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
 
-  const data = (await response.json()) as AnalyzeResponse;
+  const data = (await response.json()) as (AnalyzeResult & { success?: boolean; error?: string }) | undefined;
+  if (!response.ok || !data) {
+    throw new Error(data?.error ?? `Request failed with status ${response.status}.`);
+  }
+  return data as AnalyzeResult;
+}
+
+export async function pollAnalysis(analysisId: string): Promise<AnalysisState> {
+  const response = await fetch(`${API_BASE}/api/analyze/${analysisId}`);
+  const data = (await response.json()) as AnalysisState & { success?: boolean; error?: string };
   if (!response.ok || !data.success) {
-    throw new Error(data.error ?? `Request failed with status ${response.status}.`);
+    throw new Error(data.error ?? `Polling failed with status ${response.status}.`);
   }
   return data;
+}
+
+export async function downloadProjectZip(analysisId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/analyze/${analysisId}/download`);
+  if (!response.ok) {
+    throw new Error(`Download failed with status ${response.status}.`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "ai-locator-project.zip";
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function checkHealth(): Promise<{ ok: boolean; provider: string }> {

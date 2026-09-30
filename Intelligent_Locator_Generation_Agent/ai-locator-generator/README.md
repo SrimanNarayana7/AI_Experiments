@@ -14,6 +14,7 @@ INPUT DOM  ->  ANALYZE  ->  ANALYSIS  ->  ELEMENT LOCATORS  ->  PAGE OBJECT
 - [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
 - [LangFlow setup](#langflow-setup)
+- [Large DOM handling](#large-dom-handling)
 - [API](#api)
 - [Frontend overview](#frontend-overview)
 - [Project layout](#project-layout)
@@ -106,6 +107,9 @@ Backend configuration lives in `backend/.env` (copy `backend/.env.example` and e
 | `LANGFLOW_API_KEY` | LangFlow API key (Desktop 1.11 requires one) |
 | `LANGFLOW_TIMEOUT_MS` | default `120000` |
 | `PORT` | backend port, default `4000` |
+| `BATCH_MAX_TOKENS` | token budget per LangFlow batch, default `6000` |
+| `BATCH_MAX_BATCHES` | hard cap on batch count, default `12` |
+| `BATCH_CONCURRENCY` | concurrent batch requests, default `3` |
 
 Frontend: `VITE_API_URL` defaults to `http://localhost:4000`; the Vite dev server proxies `/api` to it, so no frontend env file is needed for local development.
 
@@ -128,7 +132,23 @@ LANGFLOW_API_KEY=<LangFlow API key>
 
 Flow pipeline: **Chat Input → DOM Processor → Locator Analysis Prompt → Chat Model → JSON Response Parser → Chat Output**. The backend sends a JSON envelope (`framework`, `language`, `elementList`, `warnings`, `sourceNote`) as the run `input_value` — no LangFlow tweaks needed. Everything else (validation, extraction, schema checks, POM guarantee) stays deterministic on the backend side. See `langflow/README.md` for full details.
 
+## Large DOM handling
+
+The pipeline never fails just because the HTML is large:
+
+1. **Deterministic extraction** — cheerio extracts every interactive element with stable ids (`el-0000`, `el-0001`, …) and structural context (form, section, nav/header/footer, tablist, repeated class signature).
+2. **Token budgeting** — each batch is estimated with a ~4 chars/token heuristic against `BATCH_MAX_TOKENS`.
+3. **Structural batching** — if the element list exceeds the budget, it is split on element boundaries (never raw character ranges), keeps related controls (same form/section) together, and respects `BATCH_MAX_BATCHES` by growing the per-batch budget instead.
+4. **Concurrent batch runs** — batches run through LangFlow with bounded concurrency (`BATCH_CONCURRENCY`) and one retry per failed batch.
+5. **Merge + global ranking** — batch results are merged by element id, deduplicated, deterministically validated, and ranked once globally; the summary is recomputed from final scores.
+
+For long-running batched runs the API switches to a job model (see [API](#api)); the UI shows per-batch progress.
+
+Deterministic locator validation (against the original DOM) runs for every primary locator: selector syntax, attribute existence, uniqueness, match against the intended element, duplicate selectors, and fragile generated classes (CSS-in-JS hashes). Each element carries a `validation` result and a combined `finalScore` (AI score adjusted by objective checks).
+
 ## API
+
+### Analyze
 
 `POST /api/analyze`
 
@@ -142,29 +162,41 @@ Flow pipeline: **Chat Input → DOM Processor → Locator Analysis Prompt → Ch
 
 Only `html` XOR `pageUrl` is required. Supported frameworks: `selenium`, `playwright`, `cypress`. Supported languages: `java`, `python`, `javascript`, `typescript`, `csharp` (Cypress supports `javascript`/`typescript` only).
 
-Response:
+Small DOMs complete synchronously:
 
 ```json
 {
   "success": true,
-  "analysis": {
-    "summary": { "elementsAnalyzed": 1, "highConfidence": 1, "avgScore": 94, "warnings": [] },
-    "elements": [
-      {
-        "element": "Login button",
-        "tag": "button",
-        "primary": { "strategy": "role", "locator": "getByRole('button', { name: 'Login' })", "score": 94, "reason": "..." },
-        "fallbacks": [],
-        "risks": [],
-        "pageObject": { "field": "loginButton", "code": "readonly loginButton = this.page.getByRole('button', { name: 'Login' });" }
-      }
-    ],
-    "pageObjectClass": { "name": "MainPage", "language": "typescript", "code": "import { Page } from '@playwright/test';\n..." }
-  }
+  "status": "completed",
+  "analysisId": "…",
+  "analysis": { "summary": { … }, "elements": [ … ], "pageObjectClass": { … } },
+  "files": [ { "path": "src/pages/LoginPage.ts", "content": "…", "kind": "page" } ],
+  "project": { "pages": 1, "components": 1, "tabs": 0, "elementsAnalyzed": 4, "stable": 2, "avgScore": 88, "fileCount": 6 },
+  "processing": { "batched": false, "batchCount": 1, "elementsExtracted": 4, "completedBatches": 0 },
+  "domStats": { "htmlChars": 301, "estimatedTokens": 64 }
 }
 ```
 
+Large DOMs (batched) return `202` immediately:
+
+```json
+{
+  "success": true,
+  "analysisId": "…",
+  "status": "processing",
+  "processing": { "batched": true, "batchCount": 8, "elementsExtracted": 127, "completedBatches": 0 },
+  "domStats": { "htmlChars": 1840000, "estimatedTokens": 42000 }
+}
+```
+
+Then poll:
+
+- `GET /api/analyze/{analysisId}` — `{ status: "processing" | "completed" | "failed", processing, analysis?, files?, project?, error? }`
+- `GET /api/analyze/{analysisId}/download` — the complete automation project as `ai-locator-project.zip`
+
 `GET /api/health` returns `{ "status": "ok", "provider": "langflow" }`.
+
+The ZIP contains the generated multi-file project: `README.md`, build configuration (`pom.xml` / `package.json` / `requirements.txt`), source files under `src/pages|components|tabs/`, and `locator-report.json` (full element-level report with ownership, validation, and scores). Filenames are sanitized and path traversal is blocked.
 
 ## Frontend overview
 
@@ -188,14 +220,16 @@ ai-locator-generator/
 ├── stop-all.ps1       # stop both servers
 ├── backend/           # Express + TypeScript adapter
 │   ├── src/
-│   │   ├── services/     # analyze orchestration, input validation
-│   │   ├── dom/          # cheerio element extraction
-│   │   ├── langflow/     # LangFlow run client + response parsing
+│   │   ├── services/     # analyze orchestration, batching, input validation
+│   │   ├── analysis/     # batch merge, deterministic locator validation, job store
+│   │   ├── dom/          # cheerio extraction, token estimator, context-aware chunker
+│   │   ├── langflow/     # LangFlow run client + batch runner + response parsing
 │   │   ├── llm/          # OpenAI/Anthropic clients + mock provider
-│   │   ├── pom/          # Page Object class guarantee/assembler
+│   │   ├── pom/          # page/component/tab model, project generator, POM guarantee, ZIP export
 │   │   ├── prompt/       # system/user prompt builders
 │   │   ├── validation/   # zod schema + JSON repair
-│   │   └── url/          # static page fetcher
+│   │   └── url/          # static page fetcher (SSRF-guarded)
+│   ├── test/             # vitest unit tests
 │   └── .env.example
 ├── frontend/          # React + Vite + TypeScript + Tailwind v4 + Framer Motion
 │   └── src/
@@ -203,11 +237,11 @@ ai-locator-generator/
 │       │   ├── layout/     # AppShell, TopNav
 │       │   ├── input/      # DomEditor, UrlInput, InputToolbar
 │       │   ├── analysis/   # AnalysisSummary, InsightList, StabilityScore
-│       │   ├── locators/   # LocatorCard
+│       │   ├── locators/   # LocatorCard (validation badges, copy class snippet)
 │       │   ├── code/       # CodeViewer, PageObjectViewer, JsonViewer
 │       │   └── common/     # Button, CopyButton, Badge, Tabs, Tooltip, StatusIndicator
-│       ├── hooks/          # useLocatorAnalysis
-│       ├── pages/          # LocatorGenerator
+│       ├── hooks/          # useLocatorAnalysis (polling for batched runs)
+│       ├── pages/          # LocatorGenerator (Files tab, ZIP download, batch progress)
 │       ├── services/       # api.ts
 │       └── types/          # locator.ts
 └── langflow/          # importable flow JSON + prompt artifact
@@ -229,11 +263,11 @@ npm install
 npm run dev        # vite
 
 # checks
-cd backend  && npm run typecheck
+cd backend  && npm run typecheck && npm test
 cd frontend && npm run build
 ```
 
-Backend tests: none yet for the frontend/backend layers; the LangFlow flow logic is validated by importing the flow and running it end-to-end.
+Backend unit tests (vitest) cover token estimation, DOM chunking (order/ids/batch cap), batch merge, deterministic locator validation, page/component/tab inference, ZIP path-traversal protection, and URL SSRF guards.
 
 ## Troubleshooting
 

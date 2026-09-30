@@ -14,10 +14,11 @@ export interface Insight {
 }
 
 export function buildInsights(elements: ElementAnalysis[]): Insight[] {
-  const stable = elements.filter((el) => el.primary.score >= 80);
+  const scoreOf = (el: ElementAnalysis) => el.finalScore ?? el.primary.score;
+  const stable = elements.filter((el) => scoreOf(el) >= 80);
   const structural = elements.filter(isStructuralStrategy);
   const needsTestid = elements.filter(
-    (el) => !isTestAttributeStrategy(el.primary.strategy) && el.primary.score < 90,
+    (el) => !isTestAttributeStrategy(el.primary.strategy) && scoreOf(el) < 90,
   );
 
   const items: Insight[] = [

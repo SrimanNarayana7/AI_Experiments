@@ -60,6 +60,8 @@ interface LocatorCardProps {
 export function LocatorCard({ element, index, defaultExpanded = false }: LocatorCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const Icon = iconForTag(element.tag);
+  const score = element.finalScore ?? element.primary.score;
+  const validation = element.validation;
 
   return (
     <motion.article
@@ -82,15 +84,26 @@ export function LocatorCard({ element, index, defaultExpanded = false }: Locator
               </h3>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <Badge tone="neutral">{element.tag}</Badge>
-                <Badge tone={toneForScore(element.primary.score)}>{element.primary.strategy}</Badge>
+                <Badge tone={toneForScore(score)}>{element.primary.strategy}</Badge>
+                {validation?.status && (
+                  <Badge tone={validation.status === "valid" ? "success" : validation.status === "fragile" ? "warning" : "danger"}>
+                    {validation.status === "valid"
+                      ? "✓ validated"
+                      : validation.status === "ambiguous"
+                        ? "ambiguous match"
+                        : validation.status === "not-found"
+                          ? "not found in DOM"
+                          : "fragile selector"}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
-          <Badge tone={element.primary.score >= 75 ? "primary" : "warning"}>Recommended</Badge>
+          <Badge tone={score >= 75 ? "primary" : "warning"}>Recommended</Badge>
         </div>
 
         <div className="flex flex-col gap-2.5">
-          <StabilityScore score={element.primary.score} />
+          <StabilityScore score={score} />
           <div className="flex items-start gap-2 rounded-xl border border-line bg-editor px-3 py-2.5">
             <code className="mono flex-1 overflow-x-auto whitespace-pre text-[12.5px] leading-relaxed text-ink">
               {element.primary.locator}
@@ -99,9 +112,33 @@ export function LocatorCard({ element, index, defaultExpanded = false }: Locator
           </div>
         </div>
 
+        {validation && validation.checks.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {validation.checks.map((check, i) => (
+              <li key={i}>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                    check.ok
+                      ? "border-success/25 bg-success/5 text-success"
+                      : "border-danger/25 bg-danger/5 text-danger"
+                  }`}
+                >
+                  {check.ok ? "✓" : "✗"} {check.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <p className="text-xs leading-relaxed text-muted">
           <span className="font-medium text-ink">Why:</span> {element.primary.reason ?? "Chosen for stability and uniqueness."}
         </p>
+
+        <div className="flex items-center gap-2">
+          {element.pageObject.code && (
+            <CopyButton text={element.pageObject.code} label="Copy class snippet" />
+          )}
+        </div>
 
         {element.fallbacks.length > 0 && (
           <button
