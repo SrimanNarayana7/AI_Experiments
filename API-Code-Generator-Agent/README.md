@@ -50,7 +50,7 @@ Generated projects compile clean (`tsc --noEmit`) and pass `eslint .` out of the
 
 ## Architecture
 
-```
+```text
 React (Vite + TypeScript)
    →  Backend (Fastify + TypeScript)
         →  LangFlow  →  DeepSeek V4 Flash
@@ -60,7 +60,7 @@ React (Vite + TypeScript)
 
 ## Project structure
 
-```
+```text
 frontend/   React + Vite + TypeScript + Tailwind
 backend/    Fastify + TypeScript (parser, scenarios, generators, assembly, LangFlow)
 prisma/     Prisma schema for PostgreSQL
