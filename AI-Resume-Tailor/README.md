@@ -5,8 +5,8 @@ and with every change visible so the candidate can approve it.
 
 Two pieces live here:
 
-- **`resume-tailor/`** — a skill that turns a resume + JD into a tailored resume with a
-  fit-gap match table, a highlighted preview, and a downloadable `.docx`.
+- **`resume-tailor/`** — a skill that turns a resume + job description (JD) into a tailored
+  resume with a fit-gap match table, a highlighted preview, and a downloadable `.docx`.
 - **`resume-tailor-app/`** — a React + Vite web app that does the same job without
   invoking the skill, using any OpenAI-compatible `chat/completions` endpoint.
 
