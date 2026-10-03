@@ -144,14 +144,20 @@ The workflow:
 
 ## Testing
 
+Backend:
+
 ```bash
 cd backend
 npm test          # unit + route tests
 npm run lint
 npm run typecheck
 npm run build
+```
 
-cd ../frontend
+Frontend:
+
+```bash
+cd frontend
 npm run lint
 npm run typecheck
 npm run build
