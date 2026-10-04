@@ -3,14 +3,14 @@
 Tailor an existing resume to a specific job description — honestly, in an ATS-safe way,
 and with every change visible so the candidate can approve it.
 
-Two pieces live here:
+The repository contains two pieces:
 
 - **`resume-tailor/`** — a skill that turns a resume + job description (JD) into a tailored
   resume with a fit-gap match table, a highlighted preview, and a downloadable `.docx`.
 - **`resume-tailor-app/`** — a React + Vite web app that does the same job without
   invoking the skill, using any OpenAI-compatible `chat/completions` endpoint.
 
-## Quick start (app)
+## Quick start (web app)
 
 ```bash
 cd resume-tailor-app
@@ -23,7 +23,7 @@ npm run dev
 
 See the [app README](resume-tailor-app/README.md) for setup and workflow.
 
-## Skill
+## Skill (`resume-tailor/`)
 
 The `resume-tailor` skill follows a six-step workflow: read inputs, extract real JD
 requirements, cross-reference against the resume, report the match table before writing,
@@ -37,7 +37,7 @@ Inline markup makes edits auditable:
 |---|---|---|
 | `==text==` | yellow highlight | a change made for this JD |
 | `[text]` | red bold | a fact only the candidate can supply |
-| `**text**` | bold | a metric or term worth anchoring the eye on |
+| `**text**` | bold | a metric or term worth drawing the eye to |
 
 Read the full workflow in [`resume-tailor/SKILL.md`](resume-tailor/SKILL.md).
 
