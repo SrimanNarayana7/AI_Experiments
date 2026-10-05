@@ -6,7 +6,7 @@ The app is intentionally only the **presentation and integration layer** — all
 
 ## Architecture
 
-```
+```text
 React (this app)
   │  POST {base}/api/v1/run/{FLOW_ID}?stream=false
   ▼
@@ -113,7 +113,7 @@ interface BugTriageResult {
 
 ## Project structure
 
-```
+```text
 src/
   components/
     layout/          App header / footer / main shell
