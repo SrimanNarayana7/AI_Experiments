@@ -257,7 +257,7 @@ npm run db:seed
 
 ## Testing
 
-### Unit / API tests
+### Unit / API tests, type checks, and build
 
 Run across all workspaces:
 
