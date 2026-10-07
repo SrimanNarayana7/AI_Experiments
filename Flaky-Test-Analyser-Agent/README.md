@@ -72,7 +72,7 @@ Copy `.env.example` to `.env.local` and adjust:
 **Security:** never put a real production secret in `VITE_LANGFLOW_API_KEY`.
 Use the proxy option for production, or configure Langflow CORS properly.
 
-## How to start Vite
+## Running the app
 
 ```bash
 npm run dev        # http://localhost:5175
