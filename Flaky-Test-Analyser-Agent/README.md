@@ -177,7 +177,7 @@ The response is located at the Chat Output's `outputs[].outputs.message.message.
 lists, and plain "Name — cause" lines. If structured extraction fails, the app
 shows the raw response in the **AI Analysis** panel instead of crashing.
 
-## Troubleshooting CORS
+## Troubleshooting CORS errors
 
 The dev server runs on `http://localhost:5175`; Langflow on
 `http://localhost:7860` by default. Browsers block cross-origin requests unless
