@@ -46,7 +46,7 @@ Generated tests:
 - include negative tests derived from the deterministic scenario matrix,
 - clean up created resources where the contract supports deletion.
 
-Generated projects compile clean (`tsc --noEmit`) and pass `eslint .` out of the box.
+Generated projects compile cleanly (`tsc --noEmit`) and pass `eslint .` out of the box.
 
 ## Architecture
 
